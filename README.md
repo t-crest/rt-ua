@@ -1,11 +1,17 @@
 # rt-ua
 Real-Time OPC UA
 
-## Git submodules
-This uses the open62541 OPC UA stack as submodule. Pull the submodule via
+## Build for Patmos Ubuntu VM
+
+Patmos Ubuntu VM required: http://patmos.compute.dtu.dk/ 
 
 ```shell
-git submodule update --init --recursive
+git clone  --recursive https://github.com/t-crest/rt-ua
+
+mkdir build
+cd build
+
+cmake .. -DCMAKE_C_COMPILER=/home/patmos/t-crest/local/bin/patmos-clang -DCMAKE_CXX_COMPILER=/home/patmos/t-crest/local/bin/patmos-clang++
 ```
 
 
