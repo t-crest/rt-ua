@@ -14,10 +14,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> //memset
+
+#ifdef UA_ARCHITECTURE_PATMOS
 #include <machine/patmos.h>
 #include <machine/spm.h>
 #include "udp.h"
 #include "eth_mac_driver.h"
+#endif /* UA_ARCHITECTURE_PATMOS */
 
 #include <open62541/plugin/log_stdout.h>
 #include <open62541/plugin/pubsub_udp.h>
@@ -25,6 +28,7 @@
 #include <open62541/server_config_default.h>
 
 #include <open62541/server_pubsub.h>
+#include <ua_pubsub.h>
 
 UA_NodeId connectionIdent, publishedDataSetIdent, writerGroupIdent;
 
@@ -263,11 +267,13 @@ int main()
     int i = foo(b, val, val2);
     printf("%i\n",i);
 
+#ifdef UA_ARCHITECTURE_PATMOS
     eth_mac_initialize();
     arp_table_init();
     ipv4_set_my_ip(my_ip);
     printf("MAC: inti'd\n");
     printf("ARP: init'd\n");
+#endif /* UA_ARCHITECTURE_PATMOS */
 
     puts("\nOpen6541 Server Demo Started\n");
 
