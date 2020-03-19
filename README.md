@@ -1,9 +1,22 @@
 # rt-ua
 Real-Time OPC UA
 
-## Build for Patmos Ubuntu VM
+## Build for Patmos
 
 Patmos Ubuntu VM required: http://patmos.compute.dtu.dk/ 
+
+```shell
+git clone  --recursive https://github.com/t-crest/rt-ua
+
+cd rt-ua
+
+mkdir build-patmos
+cd build-patmos
+
+cmake -DCMAKE_TOOLCHAIN_FILE=../Toolchain-patmos.cmake ..
+```
+
+## Build for Ubuntu
 
 ```shell
 git clone  --recursive https://github.com/t-crest/rt-ua
@@ -13,8 +26,9 @@ cd rt-ua
 mkdir build
 cd build
 
-cmake .. -DCMAKE_C_COMPILER=/home/patmos/t-crest/local/bin/patmos-clang -DCMAKE_CXX_COMPILER=/home/patmos/t-crest/local/bin/patmos-clang++
+cmake ..
 ```
+
 
 
 
