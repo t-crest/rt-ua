@@ -27,9 +27,19 @@ set(PATMOS_OPEN62541_SOURCE_FILES
 
 add_executable(patmos_open62541 ${PATMOS_OPEN62541_SOURCE_FILES})
 target_link_libraries(patmos_open62541 PUBLIC
-    open62541)
+    open62541 m)
 
 if("${UA_ARCHITECTURE}" STREQUAL "patmos")
-	SET_TARGET_PROPERTIES(patmos_open62541 PROPERTIES COMPILE_FLAGS "-target patmos-unknown-unknown-elf -O2")
+    set(PATMOSHOME ~/t-crest/patmos)
+    set(LIBETH ${PATMOSHOME}/c/ethlib)
+    set(SERIAL /dev/ttyUSB0)
+
+	#SET_TARGET_PROPERTIES(patmos_open62541 PROPERTIES COMPILE_FLAGS "-target patmos-unknown-unknown-elf -O2 -mpatmos-disable-vliw")
+    SET_TARGET_PROPERTIES(patmos_open62541 PROPERTIES LINK_FLAGS "${LIBETH}/*.c -target patmos-unknown-unknown-elf -O2 -mpatmos-disable-vliw")
+    target_include_directories(patmos_open62541 PUBLIC ~/t-crest/patmos/c/ethlib)
+
+    add_custom_target(run
+        COMMAND cd ${PATMOSHOME} && make config BOARD=altde2-all && cd - && sleep 1 && patserdow -v ${SERIAL} patmos_open62541/patmos_open62541
+    )
 endif()
 #file(COPY config.cfg DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
