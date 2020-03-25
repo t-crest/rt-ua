@@ -14,9 +14,9 @@ set(UA_ENABLE_DA OFF CACHE BOOL "UA_ENABLE_DA")
 set(UA_ENABLE_DISCOVERY OFF CACHE BOOL "UA_ENABLE_DISCOVERY")
 set(UA_ENABLE_NODEMANAGEMENT OFF CACHE BOOL "UA_ENABLE_NODEMANAGEMENT")
 set(UA_ENABLE_PUBSUB ON CACHE BOOL "Enable open62541 PubSub information model")
-set(UA_LOGLEVEL 300 CACHE STRING "Set Loglevel 300")
+set(UA_LOGLEVEL 600 CACHE STRING "Set Loglevel 600(FATAL)")
 set(UA_ENABLE_PUBSUB_CUSTOM_PUBLISH_HANDLING ON CACHE BOOL "Enable open62541 PubSub custom publish handling")
-#set(UA_NAMESPACE_ZERO MINIMAL CACHE STRING "open62541 namespace zero MINIMAL, REDUCED, FULL")
+set(UA_NAMESPACE_ZERO MINIMAL CACHE STRING "open62541 namespace zero MINIMAL, REDUCED, FULL")
 
 add_subdirectory(${OPEN62541_DIR} open62541)
 
@@ -30,16 +30,23 @@ target_link_libraries(patmos_open62541 PUBLIC
     open62541 m)
 
 if("${UA_ARCHITECTURE}" STREQUAL "patmos")
-    set(PATMOSHOME ~/t-crest/patmos)
+    set(PATMOSHOME /home/patmos/t-crest/patmos)
     set(LIBETH ${PATMOSHOME}/c/ethlib)
     set(SERIAL /dev/ttyUSB0)
 
+    file(GLOB patmos_libeth_src ${LIBETH}/*.c)
+    ADD_LIBRARY ( patmos_libeth ${patmos_libeth_src})
+    target_link_libraries(patmos_open62541 PUBLIC patmos_libeth)
+
 	#SET_TARGET_PROPERTIES(patmos_open62541 PROPERTIES COMPILE_FLAGS "-target patmos-unknown-unknown-elf -O2 -mpatmos-disable-vliw")
-    SET_TARGET_PROPERTIES(patmos_open62541 PROPERTIES LINK_FLAGS "${LIBETH}/*.c -target patmos-unknown-unknown-elf -O2 -mpatmos-disable-vliw")
+    SET_TARGET_PROPERTIES(patmos_open62541 PROPERTIES LINK_FLAGS "-target patmos-unknown-unknown-elf -O2 -mpatmos-disable-vliw -mserialize=wcet.pml")
     target_include_directories(patmos_open62541 PUBLIC ~/t-crest/patmos/c/ethlib)
 
     add_custom_target(run
         COMMAND cd ${PATMOSHOME} && make config BOARD=altde2-all && cd - && sleep 1 && patserdow -v ${SERIAL} patmos_open62541/patmos_open62541
+    )
+    add_custom_target(wcet
+        COMMAND platin wcet -i wcet.pml -b patmos_open62541/patmos_open62541 -e UA_WriterGroup_publishCallback --report
     )
 endif()
 #file(COPY config.cfg DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
