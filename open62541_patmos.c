@@ -1,19 +1,15 @@
-/*
-	Demo file for open62541 Test
+#include <open62541/plugin/log_stdout.h>
+#include <open62541/plugin/pubsub_udp.h>
+#include <open62541/server.h>
+#include <open62541/server_config_default.h>
 
-	Author: Andreas Kirchberger
-	Copyright:
-*/
-
-#define PUB_INTERVAL             100 /* Publish interval in milliseconds */
-#define DATA_SET_WRITER_ID       62541
-
-#define MILLI_AS_NANO_SECONDS    (1000 * 1000)
-#define SECONDS_AS_NANO_SECONDS  (1000 * 1000 * 1000)
-
-#include <stdio.h>
+#include <signal.h>
 #include <stdlib.h>
-#include <string.h> //memset
+#include <open62541/server_pubsub.h>
+
+//#define PUBSUB_RT_LEVEL UA_PUBSUB_RT_NONE
+//#define PUBSUB_RT_LEVEL UA_PUBSUB_RT_DIRECT_VALUE_ACCESS
+#define PUBSUB_RT_LEVEL UA_PUBSUB_RT_FIXED_SIZE
 
 #ifdef UA_ARCHITECTURE_PATMOS
 #include <machine/patmos.h>
@@ -22,36 +18,13 @@
 #include "eth_mac_driver.h"
 #endif /* UA_ARCHITECTURE_PATMOS */
 
-#include <open62541/plugin/log_stdout.h>
-#include <open62541/plugin/pubsub_udp.h>
-#include <open62541/server.h>
-#include <open62541/server_config_default.h>
-
-#include <open62541/server_pubsub.h>
-#include <ua_pubsub.h>
+#include <signal.h>
 
 UA_NodeId connectionIdent, publishedDataSetIdent, writerGroupIdent;
-
-UA_NodeId myIntegerNodeId;
-
-UA_Boolean running = true;
 
 UA_ServerCallback pubCallback = NULL;
 UA_Server *pubServer;
 void *pubData;
-
-static void
-publishInterrupt() {
-
-    //pubCallback(pubServer, pubData);
-    UA_WriterGroup_publishCallback(pubServer, pubData);
-}
-
-
-/* The following three methods are originally defined in
- * /src/pubsub/ua_pubsub_manager.c. We provide a custom implementation here to
- * use system interrupts instead if time-triggered callbacks in the OPC UA
- * server control flow. */
 
 UA_StatusCode
 UA_PubSubManager_addRepeatedCallback(UA_Server *server,
@@ -83,240 +56,213 @@ UA_PubSubManager_removeRepeatedPubSubCallback(UA_Server *server, UA_UInt64 callb
     pubCallback = NULL; /* So that a new callback can be registered */
 }
 
+/* possible options: PUBSUB_CONFIG_FASTPATH_NONE, PUBSUB_CONFIG_FASTPATH_FIXED_OFFSETS, PUBSUB_CONFIG_FASTPATH_STATIC_VALUES */
+#define PUBSUB_CONFIG_FASTPATH_FIXED_OFFSETS
+#define PUBSUB_CONFIG_PUBLISH_CYCLE_MS 100
+#define PUBSUB_CONFIG_PUBLISH_CYCLES 100
+#define PUBSUB_CONFIG_FIELD_COUNT 10
+
 /**
- * **PublishedDataSet handling**
+ * The PubSub RT level example points out the configuration of different PubSub RT-levels. These levels will be
+ * used together with an RT capable OS for deterministic message generation. The main target is to reduce the time
+ * spread and effort during the publish cycle. Most of the RT levels are based on pre-generated and buffered
+ * DataSetMesseges and NetworkMessages. Since changes in the PubSub-configuration will invalidate the buffered
+ * frames, the PubSub configuration must be frozen after the configuration phase.
  *
- * The PublishedDataSet (PDS) and PubSubConnection are the toplevel entities and
- * can exist alone. The PDS contains the collection of the published fields. All
- * other PubSub elements are directly or indirectly linked with the PDS or
- * connection. */
+ * This example can be configured to compare and measure the different PubSub options by the following define options:
+ * PUBSUB_CONFIG_FASTPATH_NONE -> The published fields are added to the information model and published in the default non-RT mode
+ * PUBSUB_CONFIG_FASTPATH_STATIC_VALUES -> The published fields are not visible in the information model. The publish cycle is improved
+ * by prevent the value lookup within the information model.
+ * PUBSUB_CONFIG_FASTPATH_FIXED_OFFSETS -> The published fields are not visible in the information model. After the PubSub-configuration
+ * freeze, the NetworkMessages and DataSetMessages will be calculated and buffered. During the publish cycle these buffers will only be updated.
+ */
+
+UA_NodeId publishedDataSetIdent, dataSetFieldIdent, writerGroupIdent, connectionIdentifier;
+UA_UInt32 *valueStore[PUBSUB_CONFIG_FIELD_COUNT];
+
+UA_Boolean running = true;
+static void stopHandler(int sign) {
+    UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "received ctrl-c");
+    running = false;
+}
+
+/* The following PubSub configuration does not differ from the 'normal' configuration */
 static void
-addPublishedDataSet(UA_Server *server) {
-    /* The PublishedDataSetConfig contains all necessary public
-    * informations for the creation of a new PublishedDataSet */
+addMinimalPubSubConfiguration(UA_Server * server){
+    /* Add one PubSubConnection */
+    UA_PubSubConnectionConfig connectionConfig;
+    memset(&connectionConfig, 0, sizeof(connectionConfig));
+    connectionConfig.name = UA_STRING("UDP-UADP Connection 1");
+    connectionConfig.transportProfileUri = UA_STRING("http://opcfoundation.org/UA-Profile/Transport/pubsub-udp-uadp");
+    connectionConfig.enabled = UA_TRUE;
+    UA_NetworkAddressUrlDataType networkAddressUrl = {UA_STRING_NULL , UA_STRING("opc.udp://224.0.0.22:4840/")};
+    UA_Variant_setScalar(&connectionConfig.address, &networkAddressUrl, &UA_TYPES[UA_TYPES_NETWORKADDRESSURLDATATYPE]);
+    connectionConfig.publisherId.numeric = UA_UInt32_random();
+    UA_Server_addPubSubConnection(server, &connectionConfig, &connectionIdentifier);
+    /* Add one PublishedDataSet */
     UA_PublishedDataSetConfig publishedDataSetConfig;
     memset(&publishedDataSetConfig, 0, sizeof(UA_PublishedDataSetConfig));
     publishedDataSetConfig.publishedDataSetType = UA_PUBSUB_DATASET_PUBLISHEDITEMS;
     publishedDataSetConfig.name = UA_STRING("Demo PDS");
-    /* Create new PublishedDataSet based on the PublishedDataSetConfig. */
+    /* Add one DataSetField to the PDS */
     UA_Server_addPublishedDataSet(server, &publishedDataSetConfig, &publishedDataSetIdent);
 }
 
-/**
- * **DataSetField handling**
- *
- * The DataSetField (DSF) is part of the PDS and describes exactly one published
- * field. */
 static void
-addDataSetField(UA_Server *server) {
-    /* Add a field to the previous created PublishedDataSet */
-    UA_NodeId dataSetFieldIdent;
-    UA_DataSetFieldConfig dataSetFieldConfig;
-    memset(&dataSetFieldConfig, 0, sizeof(UA_DataSetFieldConfig));
-    dataSetFieldConfig.dataSetFieldType = UA_PUBSUB_DATASETFIELD_VARIABLE;
-    dataSetFieldConfig.field.variable.fieldNameAlias = UA_STRING("Server localtime");
-    dataSetFieldConfig.field.variable.promotedField = UA_FALSE;
-    dataSetFieldConfig.field.variable.publishParameters.publishedVariable =
-    UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
-    dataSetFieldConfig.field.variable.publishParameters.attributeId = UA_ATTRIBUTEID_VALUE;
-    UA_Server_addDataSetField(server, publishedDataSetIdent,
-                              &dataSetFieldConfig, &dataSetFieldIdent);
+valueUpdateCallback(UA_Server *server, void *data) {
+    printf("valueUpdateCallback\n");
+#if defined PUBSUB_CONFIG_FASTPATH_FIXED_OFFSETS || defined PUBSUB_CONFIG_FASTPATH_STATIC_VALUES
+    for (int i = 0; i < PUBSUB_CONFIG_FIELD_COUNT; ++i)
+        *valueStore[i] = *valueStore[i] + 1;
+    if(*valueStore[0] > PUBSUB_CONFIG_PUBLISH_CYCLES)
+        running = false;
+#endif
+#if defined PUBSUB_CONFIG_FASTPATH_NONE
+    for(size_t i = 0; i < PUBSUB_CONFIG_FIELD_COUNT; i++){
+        UA_Variant value;
+        UA_Variant_init(&value);
+        if(UA_Server_readValue(server, UA_NODEID_NUMERIC(1, 1000 + (UA_UInt32) i), &value) != UA_STATUSCODE_GOOD) {
+            UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "Failed to read publish value. Node number: %zu", i);
+            continue;
+        }
+        UA_UInt32 *intValue = (UA_UInt32 *) value.data;
+        *intValue = *intValue + 1;
+        if(UA_Server_writeValue(server, UA_NODEID_NUMERIC(1, 1000 + (UA_UInt32) i), value) != UA_STATUSCODE_GOOD){
+            UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "Failed to update publish value. Node number: %zu", i);
+            continue;
+        }
+        if(i == 0 && *intValue  > PUBSUB_CONFIG_PUBLISH_CYCLES)
+            running = false;
+        UA_Variant_deleteMembers(&value);
+    }
+#endif
 }
 
-/**
- * **WriterGroup handling**
- *
- * The WriterGroup (WG) is part of the connection and contains the primary
- * configuration parameters for the message creation. */
-static void
-addWriterGroup(UA_Server *server) {
-    /* Now we create a new WriterGroupConfig and add the group to the existing
-     * PubSubConnection. */
+int main(void) {
+    //signal(SIGINT, stopHandler);
+    //signal(SIGTERM, stopHandler);
+
+    #ifdef UA_ARCHITECTURE_PATMOS
+        static unsigned char my_ip[4] = {192, 168, 2, 2};
+        eth_mac_initialize();
+        arp_table_init();
+        ipv4_set_my_ip(my_ip);
+        printf("MAC: inti'd\n");
+        printf("ARP: init'd\n");
+    #endif /* UA_ARCHITECTURE_PATMOS */
+
+    UA_Server *server = UA_Server_new();
+    UA_ServerConfig *config = UA_Server_getConfig(server);
+    UA_ServerConfig_setDefault(config);
+
+    config->pubsubTransportLayers = (UA_PubSubTransportLayer *) UA_malloc(sizeof(UA_PubSubTransportLayer));
+    if(!config->pubsubTransportLayers) {
+        UA_Server_delete(server);
+        return -1;
+    }
+    config->pubsubTransportLayers[0] = UA_PubSubTransportLayerUDPMP();
+    config->pubsubTransportLayersSize++;
+
+    /*Add standard PubSub configuration (no difference to the std. configuration)*/
+    addMinimalPubSubConfiguration(server);
+
     UA_WriterGroupConfig writerGroupConfig;
     memset(&writerGroupConfig, 0, sizeof(UA_WriterGroupConfig));
     writerGroupConfig.name = UA_STRING("Demo WriterGroup");
-    writerGroupConfig.publishingInterval = 100;
+    writerGroupConfig.publishingInterval = PUBSUB_CONFIG_PUBLISH_CYCLE_MS;
     writerGroupConfig.enabled = UA_FALSE;
     writerGroupConfig.writerGroupId = 100;
     writerGroupConfig.encodingMimeType = UA_PUBSUB_ENCODING_UADP;
+    writerGroupConfig.messageSettings.encoding             = UA_EXTENSIONOBJECT_DECODED;
+    writerGroupConfig.messageSettings.content.decoded.type = &UA_TYPES[UA_TYPES_UADPWRITERGROUPMESSAGEDATATYPE];
+    UA_UadpWriterGroupMessageDataType writerGroupMessage;
+    UA_UadpWriterGroupMessageDataType_init(&writerGroupMessage);
+    /* Change message settings of writerGroup to send PublisherId,
+     * WriterGroupId in GroupHeader and DataSetWriterId in PayloadHeader
+     * of NetworkMessage */
+    writerGroupMessage.networkMessageContentMask = (UA_UadpNetworkMessageContentMask) ((UA_UadpNetworkMessageContentMask) UA_UADPNETWORKMESSAGECONTENTMASK_PUBLISHERID |
+                                                    (UA_UadpNetworkMessageContentMask) UA_UADPNETWORKMESSAGECONTENTMASK_GROUPHEADER |
+                                                    (UA_UadpNetworkMessageContentMask) UA_UADPNETWORKMESSAGECONTENTMASK_WRITERGROUPID |
+                                                    (UA_UadpNetworkMessageContentMask) UA_UADPNETWORKMESSAGECONTENTMASK_PAYLOADHEADER);
+    writerGroupConfig.messageSettings.content.decoded.data = &writerGroupMessage;
+#ifdef PUBSUB_CONFIG_FASTPATH_FIXED_OFFSETS
     writerGroupConfig.rtLevel = UA_PUBSUB_RT_FIXED_SIZE;
-    /* The configuration flags for the messages are encapsulated inside the
-     * message- and transport settings extension objects. These extension
-     * objects are defined by the standard. e.g.
-     * UadpWriterGroupMessageDataType */
-    UA_Server_addWriterGroup(server, connectionIdent, &writerGroupConfig, &writerGroupIdent);
-}
-
-/**
- * **DataSetWriter handling**
- *
- * A DataSetWriter (DSW) is the glue between the WG and the PDS. The DSW is
- * linked to exactly one PDS and contains additional informations for the
- * message generation. */
-static void
-addDataSetWriter(UA_Server *server) {
-    /* We need now a DataSetWriter within the WriterGroup. This means we must
-     * create a new DataSetWriterConfig and add call the addWriterGroup function. */
+#elif defined PUBSUB_CONFIG_FASTPATH_STATIC_VALUES
+    writerGroupConfig.rtLevel = UA_PUBSUB_RT_DIRECT_VALUE_ACCESS;
+#endif
+    UA_Server_addWriterGroup(server, connectionIdentifier, &writerGroupConfig, &writerGroupIdent);
+    /* Add one DataSetWriter */
     UA_NodeId dataSetWriterIdent;
     UA_DataSetWriterConfig dataSetWriterConfig;
     memset(&dataSetWriterConfig, 0, sizeof(UA_DataSetWriterConfig));
     dataSetWriterConfig.name = UA_STRING("Demo DataSetWriter");
     dataSetWriterConfig.dataSetWriterId = 62541;
     dataSetWriterConfig.keyFrameCount = 10;
-    UA_Server_addDataSetWriter(server, writerGroupIdent, publishedDataSetIdent,
-                               &dataSetWriterConfig, &dataSetWriterIdent);
-}
+    UA_Server_addDataSetWriter(server, writerGroupIdent, publishedDataSetIdent, &dataSetWriterConfig, &dataSetWriterIdent);
 
+#if defined PUBSUB_CONFIG_FASTPATH_FIXED_OFFSETS || defined PUBSUB_CONFIG_FASTPATH_STATIC_VALUES
+    /* Add one DataSetField with static value source to PDS */
+    UA_DataSetFieldConfig dsfConfig;
+    for(size_t i = 0; i < PUBSUB_CONFIG_FIELD_COUNT; i++){
+        memset(&dsfConfig, 0, sizeof(UA_DataSetFieldConfig));
+        /* Create Variant and configure as DataSetField source */
+        UA_UInt32 *intValue = UA_UInt32_new();
+        *intValue = (UA_UInt32) i * 1000;
+        valueStore[i] = intValue;
+        UA_Variant variant;
+        memset(&variant, 0, sizeof(UA_Variant));
+        UA_Variant_setScalar(&variant, intValue, &UA_TYPES[UA_TYPES_UINT32]);
+        UA_DataValue staticValueSource;
+        memset(&staticValueSource, 0, sizeof(staticValueSource));
+        staticValueSource.value = variant;
+        dsfConfig.field.variable.staticValueSourceEnabled = UA_TRUE;
+        dsfConfig.field.variable.staticValueSource.value = variant;
+        UA_Server_addDataSetField(server, publishedDataSetIdent, &dsfConfig, &dataSetFieldIdent);
+    }
+#endif
+#if defined PUBSUB_CONFIG_FASTPATH_NONE
+    UA_DataSetFieldConfig dsfConfig;
+    memset(&dsfConfig, 0, sizeof(UA_DataSetFieldConfig));
+    for(size_t i = 0; i < PUBSUB_CONFIG_FIELD_COUNT; i++){
+        UA_VariableAttributes attributes = UA_VariableAttributes_default;
+        UA_Variant value;
+        UA_Variant_init(&value);
+        UA_UInt32 intValue = (UA_UInt32) i * 1000;
+        UA_Variant_setScalar(&value, &intValue, &UA_TYPES[UA_TYPES_UINT32]);
+        attributes.value = value;
+        if(UA_Server_addVariableNode(server, UA_NODEID_NUMERIC(1,  1000 + (UA_UInt32) i),
+                UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER), UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
+                UA_QUALIFIEDNAME(1, "variable"), UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
+                 attributes, NULL, NULL) != UA_STATUSCODE_GOOD){
+            UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "Failed to add Publish-Node to the server. Node number: %zu", i);
+            continue;
+        }
+        dsfConfig.field.variable.publishParameters.publishedVariable = UA_NODEID_NUMERIC(1, 1000 + (UA_UInt32) i);
+        dsfConfig.field.variable.publishParameters.attributeId = UA_ATTRIBUTEID_VALUE;
+        UA_Server_addDataSetField(server, publishedDataSetIdent, &dsfConfig, &dataSetFieldIdent);
+    }
+#endif
+    /* The PubSub configuration is currently editable and the publish callback is not running */
+    writerGroupConfig.publishingInterval = PUBSUB_CONFIG_PUBLISH_CYCLE_MS;
+    UA_Server_updateWriterGroupConfig(server, writerGroupIdent, &writerGroupConfig);
 
-static UA_NodeId Counter;
-UA_UInt32 publishValue = 0xCAFEDEAD;
+    /* Freeze the PubSub configuration (and start implicitly the publish callback) */
+    UA_Server_freezeWriterGroupConfiguration(server, writerGroupIdent);
+    UA_Server_setWriterGroupOperational(server, writerGroupIdent);
 
-static void
-addServerNodes(UA_Server* server) {
-    //UA_UInt32 publishValue = 0xCAFEDEAD;
-    UA_VariableAttributes publisherAttr = UA_VariableAttributes_default;
-    UA_Variant_setScalar(&publisherAttr.value, &publishValue, &UA_TYPES[UA_TYPES_INT32]);
-    publisherAttr.displayName = UA_LOCALIZEDTEXT("en-US", "My Counter");
-    publisherAttr.accessLevel = UA_ACCESSLEVELMASK_READ | UA_ACCESSLEVELMASK_WRITE;
-    myIntegerNodeId = UA_NODEID_STRING(1, "the.answer");
-    UA_Server_addVariableNode(server, myIntegerNodeId,
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_OBJECTSFOLDER),
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_ORGANIZES),
-                              UA_QUALIFIEDNAME(1, "My Counter"),
-                              UA_NODEID_NUMERIC(0, UA_NS0ID_BASEDATAVARIABLETYPE),
-                              publisherAttr, NULL, &Counter);
-}
+    UA_UInt64 callbackId;
+    UA_Server_addRepeatedCallback(server, valueUpdateCallback, NULL, PUBSUB_CONFIG_PUBLISH_CYCLE_MS, &callbackId);
 
-static void
-addPubSubConfiguration(UA_Server* server) {
-
-    UA_PubSubConnectionConfig connectionConfig;
-    memset(&connectionConfig, 0, sizeof(connectionConfig));
-    connectionConfig.name = UA_STRING("UADP Connection");
-    connectionConfig.transportProfileUri =
-        UA_STRING("http://opcfoundation.org/UA-Profile/Transport/pubsub-udp-uadp");
-    connectionConfig.enabled = true;
-    UA_NetworkAddressUrlDataType networkAddressUrl =
-        {UA_STRING_NULL, UA_STRING("opc.udp://224.0.0.22:4840/")};
-    UA_Variant_setScalar(&connectionConfig.address, &networkAddressUrl,
-                         &UA_TYPES[UA_TYPES_NETWORKADDRESSURLDATATYPE]);
-    connectionConfig.publisherId.numeric = UA_UInt32_random();
-    UA_StatusCode ret=UA_Server_addPubSubConnection(server, &connectionConfig, &connectionIdent);
-    printf("UA_Server_addPubSubConnection=%#lx\n", ret);
-
-    addPublishedDataSet(server);
-
-/*
-    UA_NodeId dataSetFieldIdent;
-    UA_DataSetFieldConfig dataSetFieldConfig;
-    memset(&dataSetFieldConfig, 0, sizeof(UA_DataSetFieldConfig));
-    dataSetFieldConfig.dataSetFieldType = UA_PUBSUB_DATASETFIELD_VARIABLE;
-    dataSetFieldConfig.field.variable.fieldNameAlias = UA_STRING("Server localtime");
-    dataSetFieldConfig.field.variable.promotedField = UA_FALSE;
-    dataSetFieldConfig.field.variable.publishParameters.publishedVariable =
-    UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER_SERVERSTATUS_CURRENTTIME);
-    dataSetFieldConfig.field.variable.publishParameters.attributeId = UA_ATTRIBUTEID_VALUE;
-    UA_Server_addDataSetField(server, publishedDataSetIdent,
-                            &dataSetFieldConfig, &dataSetFieldIdent);
-*/
-
-    addServerNodes(server);
-
-    UA_NodeId dataSetFieldIdent;
-    UA_DataSetFieldConfig dataSetFieldConfig;
-    memset(&dataSetFieldConfig, 0, sizeof(UA_DataSetFieldConfig));
-    dataSetFieldConfig.dataSetFieldType = UA_PUBSUB_DATASETFIELD_VARIABLE;
-    dataSetFieldConfig.field.variable.fieldNameAlias = UA_STRING("My Config");
-    dataSetFieldConfig.field.variable.promotedField = UA_FALSE;
-    dataSetFieldConfig.field.variable.publishParameters.publishedVariable = Counter;
-    dataSetFieldConfig.field.variable.publishParameters.attributeId = UA_ATTRIBUTEID_VALUE;
-    UA_Server_addDataSetField(server, publishedDataSetIdent, &dataSetFieldConfig, &dataSetFieldIdent);
-
-    addDataSetField(server);
-    addWriterGroup(server);
-    addDataSetWriter(server);
-}
-
-
-// foo is the analysis entry point that would be inlined with -O2
-int foo(int b, int val, int val2) __attribute__((noinline));
-int foo(int b, int val, int val2) {
-
-  int i;
-  int xy;
-
-  _Pragma("loopbound min 10 max 15")
-  for (i=0; i<100; ++i) {
-    val = val + val2;
-//    printf("X");
-  }
-
-  return val;
-}
-
-// The compiler shall not compute the result
-volatile int seed2 = 3;
-
-int main()
-{
-    static unsigned char my_ip[4] = {192, 168, 2, 2};
-
-    int val = seed2;
-    int val2 = seed2+seed2;
-    int b = seed2/4;
-    int i = foo(b, val, val2);
-    printf("%i\n",i);
-
-#ifdef UA_ARCHITECTURE_PATMOS
-    eth_mac_initialize();
-    arp_table_init();
-    ipv4_set_my_ip(my_ip);
-    printf("MAC: inti'd\n");
-    printf("ARP: init'd\n");
-#endif /* UA_ARCHITECTURE_PATMOS */
-
-    puts("\nOpen6541 Server Demo Started\n");
-
-    UA_Server *server = UA_Server_new();
-    UA_ServerConfig *config = UA_Server_getConfig(server);
-    //UA_ServerConfig_setDefault(config);
-
-    config->logger.log = UA_Log_Stdout_log;
-    config->logger.context = NULL;
-    config->logger.clear = UA_Log_Stdout_clear;
-
-    puts("UA_Server_getConfig\n");
-
-    config->pubsubTransportLayers = (UA_PubSubTransportLayer *)
-        UA_malloc(sizeof(UA_PubSubTransportLayer));
-    config->pubsubTransportLayers[0] = UA_PubSubTransportLayerUDPMP();
-    config->pubsubTransportLayersSize++;
-
-    addPubSubConfiguration(server);
-    addServerNodes(server);
-
-    UA_Int32 myInteger = 43;
     while(1)
     {
-        publishInterrupt();
         sleep(1);
-
-        // Int32
-        myInteger++;
-
-        // Write a different integer value
-        UA_Variant myVar;
-        UA_Variant_init(&myVar);
-        UA_Variant_setScalar(&myVar, &myInteger, &UA_TYPES[UA_TYPES_INT32]);
-        UA_Server_writeValue(server, myIntegerNodeId, myVar);
-
-        //counterNodePublisher.namespaceIndex++;
+        valueUpdateCallback(pubServer, pubData);
+        pubCallback(pubServer, pubData);
     }
 
-    // Run the server
-    UA_StatusCode retval = UA_Server_run(server, &running);
-    //UA_Server_delete(server);
-    //UA_ServerConfig_delete(config);
+    UA_StatusCode retval = UA_STATUSCODE_GOOD;
+    retval |= UA_Server_run(server, &running);
 
-    printf("\nOpen6541 Server Demo Finished");
+    UA_Server_delete(server);
+    return retval == UA_STATUSCODE_GOOD ? EXIT_SUCCESS : EXIT_FAILURE;
 }

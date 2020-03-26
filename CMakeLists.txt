@@ -30,10 +30,6 @@ target_link_libraries(patmos_open62541 PUBLIC
     open62541 m)
 
 if("${UA_ARCHITECTURE}" STREQUAL "patmos")
-    set(PATMOSHOME /home/patmos/t-crest/patmos)
-    set(LIBETH ${PATMOSHOME}/c/ethlib)
-    set(SERIAL /dev/ttyUSB0)
-
     file(GLOB patmos_libeth_src ${LIBETH}/*.c)
     ADD_LIBRARY ( patmos_libeth ${patmos_libeth_src})
     target_link_libraries(patmos_open62541 PUBLIC patmos_libeth)
@@ -49,4 +45,4 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         COMMAND platin wcet -i wcet.pml -b patmos_open62541/patmos_open62541 -e UA_WriterGroup_publishCallback --report
     )
 endif()
-#file(COPY config.cfg DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+#file(COPY config.cfg DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
