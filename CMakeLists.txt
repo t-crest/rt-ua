@@ -1,7 +1,7 @@
 #cmake .. -DCMAKE_C_COMPILER=/home/patmos/t-crest/local/bin/patmos-clang -DCMAKE_CXX_COMPILER=/home/patmos/t-crest/local/bin/patmos-clang++
 # for cross-compiling for Patmos  use the comand "cmake -DCMAKE_TOOLCHAIN_FILE=../Toolchain-patmos.cmake .."
 
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required(VERSION 2.6)
 
 
 set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "Verbose Makefile")
@@ -31,18 +31,40 @@ target_link_libraries(patmos_open62541 PUBLIC
 
 if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     file(GLOB patmos_libeth_src ${LIBETH}/*.c)
-    ADD_LIBRARY ( patmos_libeth ${patmos_libeth_src})
+    add_library(patmos_libeth ${patmos_libeth_src})
     target_link_libraries(patmos_open62541 PUBLIC patmos_libeth)
 
-	#SET_TARGET_PROPERTIES(patmos_open62541 PROPERTIES COMPILE_FLAGS "-target patmos-unknown-unknown-elf -O2 -mpatmos-disable-vliw")
-    SET_TARGET_PROPERTIES(patmos_open62541 PROPERTIES LINK_FLAGS "-target patmos-unknown-unknown-elf -O2 -mpatmos-disable-vliw -mserialize=wcet.pml")
+    add_executable(patmos_open62541_wcet ${PATMOS_OPEN62541_SOURCE_FILES})
+    target_include_directories(patmos_open62541_wcet PUBLIC ~/t-crest/patmos/c/ethlib)
+    target_link_libraries(patmos_open62541_wcet PUBLIC
+        open62541 m)
+    target_link_libraries(patmos_open62541_wcet PUBLIC patmos_libeth)
+
+	#set_target_properties(patmos_open62541 PROPERTIES COMPILE_FLAGS "-target patmos-unknown-unknown-elf -mpatmos-disable-vliw")
+    set_target_properties(patmos_open62541
+        PROPERTIES LINK_FLAGS "-O2 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet.pml"
+    )
+    set_target_properties(patmos_open62541_wcet
+        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet.pml"
+    )
     target_include_directories(patmos_open62541 PUBLIC ~/t-crest/patmos/c/ethlib)
 
-    add_custom_target(run
+
+    add_custom_target(flash
+        DEPENDS patmos_open62541
+        COMMENT "Build binary for flashing altde2 board"
         COMMAND cd ${PATMOSHOME} && make config BOARD=altde2-all && cd - && sleep 1 && patserdow -v ${SERIAL} patmos_open62541/patmos_open62541
     )
     add_custom_target(wcet
-        COMMAND platin wcet -i wcet.pml -b patmos_open62541/patmos_open62541 -e UA_WriterGroup_publishCallback --report
+        DEPENDS patmos_open62541_wcet
+        COMMENT "Build binary for WCET analysis"
+        COMMAND platin wcet -i wcet.pml -b patmos_open62541/patmos_open62541_wcet -e UA_WriterGroup_publishCallback --report
     )
+    add_custom_target(analyze
+        DEPENDS wcet
+        COMMENT "Visualize WCET "
+        COMMAND platin visualize -i wcet.pml -f UA_WriterGroup_publishCallback --show-calls --show-timings --graphviz-format dot -O wcet/
+    )
+
 endif()
 #file(COPY config.cfg DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
