@@ -26,6 +26,7 @@ UA_ServerCallback pubCallback = NULL;
 UA_Server *pubServer;
 void *pubData;
 
+#ifdef UA_ARCHITECTURE_PATMOS
 UA_StatusCode
 UA_PubSubManager_addRepeatedCallback(UA_Server *server,
                                      UA_ServerCallback callback,
@@ -55,6 +56,7 @@ void
 UA_PubSubManager_removeRepeatedPubSubCallback(UA_Server *server, UA_UInt64 callbackId) {
     pubCallback = NULL; /* So that a new callback can be registered */
 }
+#endif
 
 /* possible options: PUBSUB_CONFIG_FASTPATH_NONE, PUBSUB_CONFIG_FASTPATH_FIXED_OFFSETS, PUBSUB_CONFIG_FASTPATH_STATIC_VALUES */
 #define PUBSUB_CONFIG_FASTPATH_FIXED_OFFSETS
@@ -252,13 +254,15 @@ int main(void) {
 
     UA_UInt64 callbackId;
     UA_Server_addRepeatedCallback(server, valueUpdateCallback, NULL, PUBSUB_CONFIG_PUBLISH_CYCLE_MS, &callbackId);
-
+    
+#ifdef UA_ARCHITECTURE_PATMOS
     while(1)
     {
         sleep(1);
         valueUpdateCallback(pubServer, pubData);
         pubCallback(pubServer, pubData);
     }
+#endif
 
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     retval |= UA_Server_run(server, &running);
