@@ -88,11 +88,11 @@ addDataSetReader(UA_Server *server) {
     /* The following parameters are used to show that the data published by
      * tutorial_pubsub_publish.c is being subscribed and is being updated in
      * the information model */
-    UA_UInt16 publisherIdentifier = 123;
+    UA_UInt16 publisherIdentifier = 0xfeca;
     readerConfig.publisherId.type = &UA_TYPES[UA_TYPES_UINT16];
     readerConfig.publisherId.data = &publisherIdentifier;
     readerConfig.writerGroupId    = 100;
-    readerConfig.dataSetWriterId  = 123;
+    readerConfig.dataSetWriterId  = 0xefbe;
 
     /* Setting up Meta data configuration in DataSetReader */
     fillTestDataSetMetaData(&readerConfig.dataSetMetaData);
