@@ -60,7 +60,7 @@ UA_PubSubManager_removeRepeatedPubSubCallback(UA_Server *server, UA_UInt64 callb
 #define PUBSUB_CONFIG_FASTPATH_FIXED_OFFSETS
 #define PUBSUB_CONFIG_PUBLISH_CYCLE_MS 100
 #define PUBSUB_CONFIG_PUBLISH_CYCLES 100
-#define PUBSUB_CONFIG_FIELD_COUNT 10
+#define PUBSUB_CONFIG_FIELD_COUNT 1
 
 /**
  * The PubSub RT level example points out the configuration of different PubSub RT-levels. These levels will be
@@ -97,7 +97,7 @@ addMinimalPubSubConfiguration(UA_Server * server){
     connectionConfig.enabled = UA_TRUE;
     UA_NetworkAddressUrlDataType networkAddressUrl = {UA_STRING_NULL , UA_STRING("opc.udp://224.0.0.22:4840/")};
     UA_Variant_setScalar(&connectionConfig.address, &networkAddressUrl, &UA_TYPES[UA_TYPES_NETWORKADDRESSURLDATATYPE]);
-    connectionConfig.publisherId.numeric = UA_UInt32_random();
+    connectionConfig.publisherId.numeric = 123;//UA_UInt32_random();
     UA_Server_addPubSubConnection(server, &connectionConfig, &connectionIdentifier);
     /* Add one PublishedDataSet */
     UA_PublishedDataSetConfig publishedDataSetConfig;
@@ -196,7 +196,7 @@ int main(void) {
     UA_DataSetWriterConfig dataSetWriterConfig;
     memset(&dataSetWriterConfig, 0, sizeof(UA_DataSetWriterConfig));
     dataSetWriterConfig.name = UA_STRING("Demo DataSetWriter");
-    dataSetWriterConfig.dataSetWriterId = 62541;
+    dataSetWriterConfig.dataSetWriterId = 123;
     dataSetWriterConfig.keyFrameCount = 10;
     UA_Server_addDataSetWriter(server, writerGroupIdent, publishedDataSetIdent, &dataSetWriterConfig, &dataSetWriterIdent);
 

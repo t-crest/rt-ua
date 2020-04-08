@@ -29,6 +29,10 @@ add_executable(patmos_open62541 ${PATMOS_OPEN62541_SOURCE_FILES})
 target_link_libraries(patmos_open62541 PUBLIC
     open62541 m)
 
+add_executable(pubsub_subscriber pubsub_subscriber.c)
+target_link_libraries(pubsub_subscriber PUBLIC
+    open62541 m)
+
 if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     file(GLOB patmos_libeth_src ${LIBETH}/*.c)
     add_library(patmos_libeth ${patmos_libeth_src})
