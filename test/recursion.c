@@ -29,5 +29,6 @@ int main()
     recurse_function_loop1();
     recurse_infinite(10);
     recurse_counter(10);
+    for(int x=0;x<100;x++) x++;
     return 0;
 }

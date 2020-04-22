@@ -34,22 +34,50 @@ protected
   end
 end
 
+def loops(root_node, node, nids, g)
+puts(root_node)
+puts(node)
+    node.successors.each { |n|
+        puts(n)
+      if n == root_node
+          puts("LOOP")
+          nid = nids[n]
+          g.get_node(nid.to_s) { |n|
+              n[:label] = "Loop"
+          }
+          break
+      else
+          loops(root_node, n, nids, g)
+      end
+    }
+end
+
 class CallGraphVisualizer < Visualizer
   def initialize(pml, options) ; @pml, @options = pml, options ; end
   def visualize_callgraph(function)
     g  = digraph("Callgraph for #{function}")
     refinement = ControlFlowRefinement.new(function, 'machinecode')
     cg = ScopeGraph.new(function, refinement, @pml, @options).callgraph
+
     nodes, nids = {}, {}
     cg.nodes.each_with_index { |n,i| nids[n] = i }
     cg.nodes.each { |node|
       nid = nids[node]
       label = node.to_s
-      nodes[node] = g.add_nodes(nid.to_s, :label => label)
+      options = { :label => label }
+      nodes[node] = g.add_nodes(nid.to_s, options)
+
+      #loops(node, node, nids, g)
     }
     cg.nodes.each { |n|
+      options = {}
       n.successors.each { |s|
-        g.add_edges(nodes[n],nodes[s])
+        if nodes[n] == nodes[s]
+          options["color"] = "#bb4039"
+        else
+          options["color"] = "#000000"
+        end
+        g.add_edges(nodes[n],nodes[s],options)
       }
     }
     g
@@ -381,6 +409,7 @@ class VisualizeTool
         puts detail.backtrace
         raise detail if options.raise_on_error
       end
+=begin
       # Visualize Scope Graph
       sgv = ScopeGraphVisualizer.new(pml,options)
       begin
@@ -433,6 +462,7 @@ class VisualizeTool
         puts "Failed to visualize relation graph of #{target}: #{detail}"
         raise detail if options.raise_on_error
       end
+=end
     end
     html.generate(outdir) if options.html
     statistics("VISUALIZE","Generated bc+mc+rg graphs" => targets.length) if options.stats
