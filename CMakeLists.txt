@@ -20,6 +20,7 @@ set(UA_NAMESPACE_ZERO MINIMAL CACHE STRING "open62541 namespace zero MINIMAL, RE
 if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     set(UA_LOGLEVEL 600 CACHE STRING "Set Loglevel 600(FATAL)")
     set(UA_ENABLE_PUBSUB_CUSTOM_PUBLISH_HANDLING ON CACHE BOOL "Enable open62541 PubSub custom publish handling")
+    set(UA_PATMOS_WCET ON CACHE BOOL "Enable Patmos WCET")
 endif()
 
 add_subdirectory(${OPEN62541_DIR} open62541)
@@ -57,6 +58,17 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     )
     target_include_directories(patmos_open62541 PUBLIC ~/t-crest/patmos/c/ethlib)
 
+    # test samples - recusrion
+    add_executable(patmos_test_recursion_bin test/recursion.c)
+    set_target_properties(patmos_test_recursion_bin
+        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_recursion.pml"
+    )
+
+    # test samples - jumptable
+    add_executable(patmos_test_jumptable_bin test/jumptable.c)
+    set_target_properties(patmos_test_jumptable_bin
+        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_jumptable.pml"
+    )
 
     add_custom_target(flash
         DEPENDS patmos_open62541
@@ -69,9 +81,19 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         COMMAND platin wcet -i wcet.pml -b patmos_open62541/patmos_open62541_wcet -e UA_WriterGroup_publishCallback --report
     )
     add_custom_target(analyze
-        DEPENDS wcet
-        COMMENT "Visualize WCET "
-        COMMAND platin visualize -i wcet.pml -f UA_WriterGroup_publishCallback --show-calls --show-timings --graphviz-format dot -O wcet/
+        DEPENDS patmos_open62541_wcet
+        COMMENT "Visualize WCET"
+        COMMAND platin visualize -i wcet.pml -f UA_WriterGroup_publishCallback --show-calls --show-timings --graphviz-format png -O wcet/
+    )
+    add_custom_target(patmos_test_recursion
+        DEPENDS patmos_test_recursion_bin
+        COMMENT "Test patmos recursion"
+        COMMAND platin visualize -i wcet_recursion.pml -f main --show-calls --show-timings --graphviz-format png -O test/
+    )
+    add_custom_target(patmos_test_jumptable
+        DEPENDS patmos_test_jumptable_bin
+        COMMENT "Test patmos jumptable"
+        COMMAND platin visualize -i wcet_jumptable.pml -f main --show-calls --show-timings --graphviz-format png -O test/
     )
 
 endif()
