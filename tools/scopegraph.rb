@@ -344,7 +344,8 @@ private
         next_index = 0
 
         block.callsites.each { |c|
-          raise Exception.new("unresolved call (in function: #{block.function.label})") if c.unresolved_call?
+          #raise Exception.new("unresolved call (in function: #{block.function.label})") if c.unresolved_call?
+          next if c.unresolved_call?
 
           # block slice node
           first_ins, last_ins = [next_index, c.index + c.delay_slots].map { |ix| block.instructions[ix] }
@@ -692,6 +693,7 @@ end
 class ScopeGraph
   # get callgraph (scopegraph restricted to FunctionNodes) for scopegraph
   def callgraph
+    @visited_edge = {}
     nodes, edges = Set.new, []
     worklist = WorkList.new([ [self.root, self.root] ])
     worklist.process { |node, function_node|
@@ -699,7 +701,12 @@ class ScopeGraph
       nodes.add(node) if node.kind_of?(FunctionNode)
       node.successors.each { |successor_node|
         if(successor_node.kind_of?(FunctionNode))
-          edges.push([function_node,successor_node,node])
+          #detect loops
+          edge = [function_node,successor_node,node]
+          edges.push(edge)
+          next if @visited_edge[edge]
+          @visited_edge[edge] = true
+
           worklist.enqueue([successor_node, successor_node])
         else
           worklist.enqueue([successor_node, function_node])

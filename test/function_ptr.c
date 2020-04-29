@@ -5,22 +5,19 @@
 void func0 (void) { }
 void func1 (void) { }
 
-typedef struct
+// original function pointer function
+void functionPtr(int c)
 {
-  void (*func0)(void);
-  void (*func1)(void);
-}  funcptrs;
+    void (*fun_ptr)(void) = &func0;
 
-void (*pf[])(void) = {func0, func1};
+    if(c==0) fun_ptr = &func0;
+    if(c==1) fun_ptr = &func1;
 
-// original jumptable function
-void jumpTable(int c)
-{
-    pf[c]();
+    (*fun_ptr)();
 }
 
-// jump table with design pattern applied
-void jumpTable_dp(int c)
+// function pointer function with design pattern applied
+void functionPtr_dp(int c)
 {
     switch (c) {
         case 0:
@@ -34,20 +31,20 @@ void jumpTable_dp(int c)
     }
 }
 
-void jumpTable_test()
+void functionPtr_test()
 {
     int c=0;
 
     #if DESIGN_PATTERN
-        jumpTable_dp(c);
+        functionPtr_dp(c);
     #else
-        jumpTable(c);
+        functionPtr(c);
     #endif
 }
 
 int main(int argc, char *argv[])
 {
-    jumpTable_test();
+    functionPtr_test();
 
     return 0;
 }

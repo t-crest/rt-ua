@@ -34,22 +34,28 @@ protected
   end
 end
 
-def loops(root_node, node, nids, g)
-puts(root_node)
-puts(node)
-    node.successors.each { |n|
-        puts(n)
-      if n == root_node
-          puts("LOOP")
-          nid = nids[n]
-          g.get_node(nid.to_s) { |n|
-              n[:label] = "Loop"
-          }
-          break
-      else
-          loops(root_node, n, nids, g)
+def detect_loop(node, pre, nodes, color)
+  puts(pre)
+  node.successors.each { |n|
+    if pre[n]
+      return true
+    else
+      new_pre = pre.clone
+      new_pre[n] = true
+      if detect_loop(n, new_pre, nodes, color)
+        nodes[n]['style'] = "filled"
+        nodes[n]['fillcolor'] = color
+        nodes[n]['color'] = color
+
+        nodes[node]['style'] = "filled" #dotted
+        nodes[node]['fillcolor'] = color
+        nodes[node]['color'] = color
+
+        return true
       end
-    }
+    end
+  }
+  return false
 end
 
 class CallGraphVisualizer < Visualizer
@@ -66,16 +72,19 @@ class CallGraphVisualizer < Visualizer
       label = node.to_s
       options = { :label => label }
       nodes[node] = g.add_nodes(nid.to_s, options)
-
-      #loops(node, node, nids, g)
     }
     cg.nodes.each { |n|
-      options = {}
       n.successors.each { |s|
+        options = {}
+        options["color"] = "#000000"
+
         if nodes[n] == nodes[s]
-          options["color"] = "#bb4039"
+          options["color"] = "#ff0000"
         else
-          options["color"] = "#000000"
+          color = "#%06x" % (rand * 0xffffff)
+          if detect_loop(s,{},nodes,color)
+            options["color"] = "#ff0000"
+          end
         end
         g.add_edges(nodes[n],nodes[s],options)
       }

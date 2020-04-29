@@ -70,30 +70,80 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_jumptable.pml"
     )
 
+    # test sample - function ptr
+    add_executable(patmos_test_function_ptr_bin test/function_ptr.c)
+    set_target_properties(patmos_test_function_ptr_bin
+        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_function_ptr.pml"
+    )
+
+    # test sample - function while loop
+    add_executable(patmos_test_while_loop_bin test/while_loop.c)
+    set_target_properties(patmos_test_while_loop_bin
+        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_while_loop.pml"
+    )
+
+    # test sample - function for loop
+    add_executable(patmos_test_for_loop_bin test/for_loop.c)
+    set_target_properties(patmos_test_for_loop_bin
+        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_for_loop.pml"
+    )
+
     add_custom_target(flash
         DEPENDS patmos_open62541
         COMMENT "Build binary for flashing altde2 board"
         COMMAND cd ${PATMOSHOME} && make config BOARD=altde2-all && cd - && sleep 1 && patserdow -v ${SERIAL} patmos_open62541/patmos_open62541
     )
+    add_custom_target(copy_ruby_tools
+        COMMENT "Copy WCET tools"
+        COMMAND cp ../tools/visualize.rb /home/patmos/t-crest/local/lib/platin/tools/visualize.rb && cp ../tools/scopegraph.rb /home/patmos/t-crest/local/lib/platin/analysis/scopegraph.rb
+    )
     add_custom_target(wcet
-        DEPENDS patmos_open62541_wcet
+        DEPENDS patmos_open62541_wcet copy_ruby_tools
         COMMENT "Build binary for WCET analysis"
         COMMAND platin wcet -i wcet.pml -b patmos_open62541/patmos_open62541_wcet -e UA_WriterGroup_publishCallback --report
     )
     add_custom_target(analyze
-        DEPENDS patmos_open62541_wcet
+        DEPENDS patmos_open62541_wcet copy_ruby_tools
         COMMENT "Visualize WCET"
         COMMAND platin visualize -i wcet.pml -f UA_WriterGroup_publishCallback --show-calls --show-timings --graphviz-format png -O wcet/
     )
     add_custom_target(patmos_test_recursion
-        DEPENDS patmos_test_recursion_bin
+        DEPENDS patmos_test_recursion_bin copy_ruby_tools
         COMMENT "Test patmos recursion"
-        COMMAND platin visualize -i wcet_recursion.pml -f main --show-calls --show-timings --graphviz-format png -O test/
+        COMMAND platin wcet -i wcet_recursion.pml -b patmos_open62541/patmos_test_recursion_bin -e main --report
+        #COMMAND platin visualize -i wcet_recursion.pml -f main --show-calls --show-timings --graphviz-format png -O test/
     )
     add_custom_target(patmos_test_jumptable
-        DEPENDS patmos_test_jumptable_bin
+        DEPENDS patmos_test_jumptable_bin copy_ruby_tools
         COMMENT "Test patmos jumptable"
-        COMMAND platin visualize -i wcet_jumptable.pml -f main --show-calls --show-timings --graphviz-format png -O test/
+        COMMAND platin visualize -i wcet_jumptable.pml -f jumpTable_test --show-calls --show-timings --graphviz-format png -O test/
+    )
+    add_custom_target(patmos_test_function_ptr
+        DEPENDS patmos_test_function_ptr_bin copy_ruby_tools
+        COMMENT "Test patmos function_ptr"
+        #COMMAND platin wcet -i wcet_function_ptr.pml -b patmos_open62541/patmos_test_function_ptr_bin -e main --report
+        COMMAND platin visualize -i wcet_function_ptr.pml -f functionPtr_test --show-calls --show-timings --graphviz-format png -O test/
+    )
+
+    add_custom_target(patmos_test_while_loop
+        DEPENDS patmos_test_while_loop_bin copy_ruby_tools
+        COMMENT "Test patmos while_loop"
+        #COMMAND platin wcet -i wcet_while_loop.pml -b patmos_open62541/patmos_test_while_loop_bin -e while_loop_test --report
+        COMMAND platin visualize -i wcet_while_loop.pml -f while_loop_test --show-calls --show-timings --graphviz-format png -O test/
+        #COMMAND pasim patmos_open62541/patmos_test_while_loop_bin
+    )
+
+    add_custom_target(patmos_test_for_loop
+        DEPENDS patmos_test_for_loop_bin copy_ruby_tools
+        COMMENT "Test patmos for_loop"
+        COMMAND platin wcet -i wcet_for_loop.pml -b patmos_open62541/patmos_test_for_loop_bin -e for_loop_test --report
+        #COMMAND platin visualize -i wcet_for_loop.pml -f for_loop_test --show-calls --show-timings --graphviz-format png -O test/
+        #COMMAND pasim patmos_open62541/patmos_test_for_loop_bin
+    )
+
+    add_custom_target(patmos_tests
+        DEPENDS patmos_test_function_ptr patmos_test_jumptable patmos_test_recursion patmos_test_while_loop patmos_test_for_loop
+        COMMENT "Test patmos function_ptr"
     )
 
 endif()
