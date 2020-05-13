@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#define DESIGN_PATTERN 0
+#define DESIGN_PATTERN 1
 
 void func0 (void) { }
 void func1 (void) { }

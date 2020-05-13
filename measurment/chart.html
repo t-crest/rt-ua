@@ -1,0 +1,109 @@
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+body{
+    font-family: sans-serif;
+    font-weight: 100;
+    font-size: 20px;
+}
+
+.line {
+  fill: none;
+  stroke: #4CB5F5;
+  stroke-width: 1.5px;
+}
+
+</style>
+<body>
+
+<div id="chart"></div>
+<button id="generate">Save as SVG</button>
+
+<!-- python -m SimpleHTTPServer -->
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://cdn.rawgit.com/eligrey/FileSaver.js/5ed507ef8aa53d8ecfea96d96bc7214cd2476fd2/FileSaver.min.js"></script>
+<script>
+
+d3.select("#generate")
+    .on("click", writeDownloadLink);
+
+function writeDownloadLink(){
+    try {
+        var isFileSaverSupported = !!new Blob();
+    } catch (e) {
+        alert("blob not supported");
+    }
+
+    var html = d3.select("svg")
+        .node().parentNode.innerHTML;
+
+    var blob = new Blob([html], {type: "image/svg+xml"});
+    saveAs(blob, "wcet-usec.svg");
+};
+
+var margin = {top: 10, right: 30, bottom: 30, left: 40},
+    width = 460 - margin.left - margin.right,
+    height = 300 - margin.top - margin.bottom;
+
+var svg = d3.select("#chart")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+d3.csv("wcet_usec.csv", function(data) {
+
+  var x = d3.scaleLinear()
+      .domain([135, 140])
+      //.domain([d3.min(data, function(d) { return +d.usec }),d3.max(data, function(d) { return +d.usec })])
+      .range([0, width]);
+  svg.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x));
+
+  var histogram = d3.histogram()
+      .value(function(d) { return d.usec; })
+      .domain(x.domain())
+      .thresholds(x.ticks(100));
+
+  var bins = histogram(data);
+
+  var y = d3.scaleLinear()
+      .range([height, 0]);
+      y.domain([0, d3.max(bins, function(d) { return d.length; })]);
+  svg.append("g")
+      .call(d3.axisLeft(y));
+
+  svg.selectAll("rect")
+      .data(bins)
+      .enter()
+      .append("rect")
+        .attr("x", 1)
+        .attr("transform", function(d) { return "translate(" + x(d.x0) + "," + y(d.length) + ")"; })
+        .attr("width", function(d) { return x(d.x1) - x(d.x0); })
+        .attr("height", function(d) { return height - y(d.length); })
+        .style("fill", function(d){ if(d.x0<140){return "orange"} else {return "#69b3a2"}})
+
+  svg
+    .append("line")
+      .attr("x1", x(500) )
+      .attr("x2", x(500) )
+      .attr("y1", y(0))
+      .attr("y2", y(600))
+      .attr("stroke", "grey")
+      .attr("stroke-dasharray", "2")
+  /*svg
+    .append("text")
+    .attr("x", x(190))
+    .attr("y", y(1400))
+    .text("threshold: 140")
+    .style("font-size", "15px")*/
+
+});
+
+</script>
+</body>

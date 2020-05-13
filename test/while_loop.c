@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #define DESIGN_PATTERN 0
-#define DEBUG 0
+#define DEBUG 1
 #define MTU 60
 
 int send(int buf_length)
@@ -51,7 +51,7 @@ int while_loop_dp(int buf_length)
 
 void while_loop_test()
 {
-    int buf_length = 60;
+    int buf_length = 1000;
     int ret = -1;
 
     #if DESIGN_PATTERN

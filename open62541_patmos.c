@@ -5,6 +5,7 @@
 
 #include <signal.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <open62541/server_pubsub.h>
 
 //#define PUBSUB_RT_LEVEL UA_PUBSUB_RT_NONE
@@ -16,6 +17,12 @@
 #include <machine/spm.h>
 #include "udp.h"
 #include "eth_mac_driver.h"
+
+//#define LEDS *((volatile _SPM unsigned int *) (PATMOS_IO_LED))
+//#define GPIO *((volatile _SPM unsigned int *) (PATMOS_IO_GPIO))
+volatile _SPM int *led_ptr = (volatile _SPM int *) PATMOS_IO_LED;
+volatile _SPM int *gpio_ptr = (volatile _SPM int *) PATMOS_IO_GPIO;
+
 #endif /* UA_ARCHITECTURE_PATMOS */
 
 #include <signal.h>
@@ -256,12 +263,27 @@ int main(void) {
     UA_Server_addRepeatedCallback(server, valueUpdateCallback, NULL, PUBSUB_CONFIG_PUBLISH_CYCLE_MS, &callbackId);
 
 #ifdef UA_ARCHITECTURE_PATMOS
-    while(1)
+    printf("CPU frequency: %d MHz\n", get_cpu_freq()/1000000);
+
+    uint64_t start, end, diff;
+    
+    for(int i=0;i<100;i++)
     {
-        sleep(1);
+        usleep(10);
         valueUpdateCallback(pubServer, pubData);
+
+        start=get_cpu_usecs();
+        *led_ptr = 0xffff;
+        *gpio_ptr = 0xffff;
         pubCallback(pubServer, pubData);
+        *led_ptr=0x0;
+        *gpio_ptr=0x0;
+        end=get_cpu_usecs();
+
+        diff=end-start;
+        printf("Time: %llu usec\n", diff);
     }
+    return EXIT_SUCCESS;
 #endif
 
     UA_StatusCode retval = UA_STATUSCODE_GOOD;

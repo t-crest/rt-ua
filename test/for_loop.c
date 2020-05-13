@@ -1,7 +1,7 @@
 #include <stdio.h>
 
-#define DESIGN_PATTERN 0
-#define DEBUG 0
+#define DESIGN_PATTERN 1
+#define DEBUG 1
 
 
 // original for loop function
@@ -12,7 +12,7 @@ int for_loop(int c)
     for(i=0;i<c;i++)
     {
         n++;
-        if(n==2) i++;
+        //if(n==2) i++;
     }
     return n;
 }

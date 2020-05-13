@@ -38,6 +38,18 @@ add_executable(pubsub_subscriber pubsub_subscriber.c)
 target_link_libraries(pubsub_subscriber PUBLIC
     open62541 m)
 
+# patmos logic analyzer measurment analyze
+add_executable(patmos_time_analyze measurment/analyze.c)
+set_target_properties(patmos_time_analyze
+    PROPERTIES LINK_FLAGS "-O2"
+)
+
+add_custom_target(patmos_measurment_analyze
+    DEPENDS patmos_time_analyze
+    COMMENT "Patmos logic analyzer measurment analyze"
+    COMMAND ./patmos_open62541/patmos_time_analyze ../measurment/logic_analyzer_24MHz.csv > ../measurment/wcet_usec.csv
+)
+
 if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     file(GLOB patmos_libeth_src ${LIBETH}/*.c)
     add_library(patmos_libeth ${patmos_libeth_src})
@@ -57,6 +69,12 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet.pml"
     )
     target_include_directories(patmos_open62541 PUBLIC ~/t-crest/patmos/c/ethlib)
+
+    # test samples - paper example
+    add_executable(patmos_test_paper_example_bin test/paper_example.c)
+    set_target_properties(patmos_test_paper_example_bin
+        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_paper_example.pml"
+    )
 
     # test samples - recusrion
     add_executable(patmos_test_recursion_bin test/recursion.c)
@@ -107,6 +125,12 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         COMMENT "Visualize WCET"
         COMMAND platin visualize -i wcet.pml -f UA_WriterGroup_publishCallback --show-calls --show-timings --graphviz-format png -O wcet/
     )
+    add_custom_target(patmos_test_paper_example
+        DEPENDS patmos_test_paper_example_bin copy_ruby_tools
+        COMMENT "Test patmos paper example"
+        #COMMAND platin wcet -i wcet_paper_example.pml -b patmos_open62541/patmos_test_paper_example_bin -e calc_pow --report
+        COMMAND platin visualize -i wcet_paper_example.pml -f calc_pow --show-calls --show-timings --graphviz-format png -O test/
+    )
     add_custom_target(patmos_test_recursion
         DEPENDS patmos_test_recursion_bin copy_ruby_tools
         COMMENT "Test patmos recursion"
@@ -116,6 +140,7 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     add_custom_target(patmos_test_jumptable
         DEPENDS patmos_test_jumptable_bin copy_ruby_tools
         COMMENT "Test patmos jumptable"
+        #COMMAND platin wcet -i wcet_jumptable.pml -b patmos_open62541/patmos_test_jumptable_bin -e jumpTable_test --report
         COMMAND platin visualize -i wcet_jumptable.pml -f jumpTable_test --show-calls --show-timings --graphviz-format png -O test/
     )
     add_custom_target(patmos_test_function_ptr
@@ -129,15 +154,15 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         DEPENDS patmos_test_while_loop_bin copy_ruby_tools
         COMMENT "Test patmos while_loop"
         #COMMAND platin wcet -i wcet_while_loop.pml -b patmos_open62541/patmos_test_while_loop_bin -e while_loop_test --report
-        COMMAND platin visualize -i wcet_while_loop.pml -f while_loop_test --show-calls --show-timings --graphviz-format png -O test/
-        #COMMAND pasim patmos_open62541/patmos_test_while_loop_bin
+        #COMMAND platin visualize -i wcet_while_loop.pml -f while_loop_test --show-calls --show-timings --graphviz-format png -O test/
+        COMMAND pasim patmos_open62541/patmos_test_while_loop_bin
     )
 
     add_custom_target(patmos_test_for_loop
         DEPENDS patmos_test_for_loop_bin copy_ruby_tools
         COMMENT "Test patmos for_loop"
-        COMMAND platin wcet -i wcet_for_loop.pml -b patmos_open62541/patmos_test_for_loop_bin -e for_loop_test --report
-        #COMMAND platin visualize -i wcet_for_loop.pml -f for_loop_test --show-calls --show-timings --graphviz-format png -O test/
+        #COMMAND platin wcet -i wcet_for_loop.pml -b patmos_open62541/patmos_test_for_loop_bin -e for_loop_test --report
+        COMMAND platin visualize -i wcet_for_loop.pml -f for_loop_test --show-calls --show-timings --graphviz-format png -O test/
         #COMMAND pasim patmos_open62541/patmos_test_for_loop_bin
     )
 
