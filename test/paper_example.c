@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 #include <time.h>
 
 void timespec_diff(struct timespec *start, struct timespec *stop,
@@ -15,15 +16,15 @@ void timespec_diff(struct timespec *start, struct timespec *stop,
     return;
 }
 
-int iter(int b, int e)
+uint32_t iter(uint32_t b, uint32_t e)
 {
-    int pow=1;
-    for(int i=0;i<e;i++)
+    uint32_t pow=1;
+    for(uint32_t i=0;i<e;i++)
         pow=pow*b;
     return pow;
 }
 
-int rec(int b, int e)
+uint32_t rec(uint32_t b, uint32_t e)
 {
     if(e==0)
         return 1;
@@ -31,24 +32,25 @@ int rec(int b, int e)
         return b*rec(b,e-1);
 }
 
-int (*pw[])(int b, int e) = {iter, rec};
+uint32_t (*pw[])(uint32_t b, uint32_t e) = {iter, rec};
 
-int calc_pow(int b, int e, int t)
+uint32_t calc_pow(uint32_t b, uint32_t e, uint32_t t, struct timespec *diff)
 {
-    struct timespec start, end, diff;
+    struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
-    int ret = pw[t](b, e);
+    uint32_t ret = pw[t](b, e);
     clock_gettime(CLOCK_MONOTONIC, &end);
-    timespec_diff(&start,&end,&diff);
-    printf("%ld\n", (long)diff.tv_nsec);
+    timespec_diff(&start,&end,diff);
 
     return ret;
 }
 
 int main(void)
 {
-    int t=0;
-    int ret=calc_pow(2, 3, t);
-    printf("%i\n", ret);
+    struct timespec diff;
+    uint32_t t=0;
+    uint32_t ret=calc_pow(2, 3, t, &diff);
+    printf("%ld\n", (long)diff.tv_nsec);
+    printf("%lu\n", ret);
     return 0;
 }

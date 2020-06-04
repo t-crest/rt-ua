@@ -1,50 +1,28 @@
 #include <stdio.h>
 
-#define DESIGN_PATTERN 1
+#define DESIGN_PATTERN 0
 
-void func0 (void) { }
-void func1 (void) { }
+void callback(void) { }
 
 // original function pointer function
-void functionPtr(int c)
+void functionPtr(void (*callback_ptr)())
 {
-    void (*fun_ptr)(void) = &func0;
-
-    if(c==0) fun_ptr = &func0;
-    if(c==1) fun_ptr = &func1;
-
-    (*fun_ptr)();
+    (*callback_ptr) (); // callback function
 }
 
-// function pointer function with design pattern applied
-void functionPtr_dp(int c)
+void functionPtr_test(void (*callback_ptr)())
 {
-    switch (c) {
-        case 0:
-            func0();
-            break;
-        case 1:
-            func1();
-            break;
-        default:
-            break;
-    }
-}
-
-void functionPtr_test()
-{
-    int c=0;
-
     #if DESIGN_PATTERN
-        functionPtr_dp(c);
+        //functionPtr_dp(callback_ptr);
     #else
-        functionPtr(c);
+        functionPtr(callback_ptr);
     #endif
 }
-
+//Callback added in main()
 int main(int argc, char *argv[])
 {
-    functionPtr_test();
+    void (*callback_ptr)(void) = &callback;
+    functionPtr_test(callback_ptr);
 
     return 0;
 }

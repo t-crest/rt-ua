@@ -3,7 +3,6 @@
 #include <open62541/server.h>
 #include <open62541/server_config_default.h>
 
-#include <signal.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <open62541/server_pubsub.h>
@@ -14,6 +13,7 @@
 
 #ifdef UA_ARCHITECTURE_PATMOS
 #include <machine/patmos.h>
+#include <machine/rtc.h>
 #include <machine/spm.h>
 #include "udp.h"
 #include "eth_mac_driver.h"
@@ -24,8 +24,6 @@ volatile _SPM int *led_ptr = (volatile _SPM int *) PATMOS_IO_LED;
 volatile _SPM int *gpio_ptr = (volatile _SPM int *) PATMOS_IO_GPIO;
 
 #endif /* UA_ARCHITECTURE_PATMOS */
-
-#include <signal.h>
 
 UA_NodeId connectionIdent, publishedDataSetIdent, writerGroupIdent;
 

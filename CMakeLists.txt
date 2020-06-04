@@ -50,6 +50,18 @@ add_custom_target(patmos_measurment_analyze
     COMMAND ./patmos_open62541/patmos_time_analyze ../measurment/logic_analyzer_24MHz.csv > ../measurment/wcet_usec.csv
 )
 
+# test samples - paper example
+add_executable(patmos_test_paper_example_bin test/paper_example.c)
+set_target_properties(patmos_test_paper_example_bin
+    PROPERTIES LINK_FLAGS "-O0"
+)
+
+add_custom_target(patmos_test_paper_example
+    DEPENDS patmos_test_paper_example_bin
+    COMMENT "Test patmos paper example"
+    COMMAND ./patmos_open62541/patmos_test_paper_example_bin
+)
+
 if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     file(GLOB patmos_libeth_src ${LIBETH}/*.c)
     add_library(patmos_libeth ${patmos_libeth_src})
@@ -70,10 +82,10 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     )
     target_include_directories(patmos_open62541 PUBLIC ~/t-crest/patmos/c/ethlib)
 
-    # test samples - paper example
-    add_executable(patmos_test_paper_example_bin test/paper_example.c)
-    set_target_properties(patmos_test_paper_example_bin
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_paper_example.pml"
+    # test samples - paper example transformed
+    add_executable(patmos_test_paper_example_transform_bin test/paper_example_transform.c)
+    set_target_properties(patmos_test_paper_example_transform_bin
+        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_paper_example_transformed.pml"
     )
 
     # test samples - recusrion
@@ -125,11 +137,12 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         COMMENT "Visualize WCET"
         COMMAND platin visualize -i wcet.pml -f UA_WriterGroup_publishCallback --show-calls --show-timings --graphviz-format png -O wcet/
     )
-    add_custom_target(patmos_test_paper_example
-        DEPENDS patmos_test_paper_example_bin copy_ruby_tools
-        COMMENT "Test patmos paper example"
-        #COMMAND platin wcet -i wcet_paper_example.pml -b patmos_open62541/patmos_test_paper_example_bin -e calc_pow --report
-        COMMAND platin visualize -i wcet_paper_example.pml -f calc_pow --show-calls --show-timings --graphviz-format png -O test/
+    add_custom_target(patmos_test_paper_example_transform
+        DEPENDS patmos_test_paper_example_transform_bin copy_ruby_tools
+        COMMENT "Test patmos paper example transformed"
+        COMMAND platin wcet -i wcet_paper_example_transformed.pml -b patmos_open62541/patmos_test_paper_example_transform_bin -e calc_pow --report
+        #COMMAND platin visualize -i wcet_paper_example_transformed.pml -f calc_pow --show-calls --show-timings --graphviz-format png -O test/
+        #COMMAND cd ${PATMOSHOME} && make config BOARD=altde2-all && cd - && sleep 1 && patserdow -v ${SERIAL} patmos_open62541/patmos_test_paper_example_transform_bin
     )
     add_custom_target(patmos_test_recursion
         DEPENDS patmos_test_recursion_bin copy_ruby_tools
@@ -140,8 +153,8 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     add_custom_target(patmos_test_jumptable
         DEPENDS patmos_test_jumptable_bin copy_ruby_tools
         COMMENT "Test patmos jumptable"
-        #COMMAND platin wcet -i wcet_jumptable.pml -b patmos_open62541/patmos_test_jumptable_bin -e jumpTable_test --report
-        COMMAND platin visualize -i wcet_jumptable.pml -f jumpTable_test --show-calls --show-timings --graphviz-format png -O test/
+        COMMAND platin wcet -i wcet_jumptable.pml -b patmos_open62541/patmos_test_jumptable_bin -e jumpTable_test --report
+        #COMMAND platin visualize -i wcet_jumptable.pml -f jumpTable_test --show-calls --show-timings --graphviz-format png -O test/
     )
     add_custom_target(patmos_test_function_ptr
         DEPENDS patmos_test_function_ptr_bin copy_ruby_tools

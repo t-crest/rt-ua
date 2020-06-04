@@ -1,28 +1,64 @@
 #include <stdio.h>
-#include <time.h>
+#include <stdint.h>
+#include <machine/rtc.h>
 
-void timespec_diff(struct timespec *start, struct timespec *stop,
-                   struct timespec *result)
+#define MAX 400
+ 
+uint32_t top=-1,stack[MAX];
+void push(uint32_t v);
+uint32_t pop();
+
+void push(uint32_t v)
 {
-    if ((stop->tv_nsec - start->tv_nsec) < 0) {
-        result->tv_sec = stop->tv_sec - start->tv_sec - 1;
-        result->tv_nsec = stop->tv_nsec - start->tv_nsec + 1000000000;
-    } else {
-        result->tv_sec = stop->tv_sec - start->tv_sec;
-        result->tv_nsec = stop->tv_nsec - start->tv_nsec;
-    }
-
-    return;
+	if(top==MAX-1)
+	{
+		//printf("Stack is full!\n");
+	}
+	else
+	{
+		top=top+1;
+		stack[top]=v;
+	}
+}
+ 
+uint32_t pop()
+{
+	if(top==-1)
+	{
+		//printf("Stack is empty!\n");
+	}
+	else
+	{
+        return stack[top--];
+	}
 }
 
-int iter(int b, int e)
+uint32_t iter(uint32_t b, uint32_t e)
 {
     int pow=1;
-    for(int i=0;i<e;i++)
+    _Pragma("loopbound min 0 max MAX")
+    for(uint32_t i=0;i<e;i++)
         pow=pow*b;
     return pow;
 }
 
+uint32_t rec(uint32_t b, uint32_t e)
+{
+    uint32_t ret=1;
+
+    if(e>MAX) return 0;
+
+    _Pragma("loopbound min 0 max MAX")
+    for(uint32_t i=e;i>0;i--)
+        push(b);
+
+    _Pragma("loopbound min 0 max MAX")
+    for(uint32_t i=e;i>0;i--)
+        ret=ret*pop();
+
+    return ret;
+}
+/*
 int rec(int b, int e)
 {
     if(e==0)
@@ -30,27 +66,28 @@ int rec(int b, int e)
     else
         return b*rec(b,e-1);
 }
+*/
+uint32_t (*pw[])(uint32_t b, uint32_t e) = {iter, rec};
 
-int (*pw[])(int b, int e) = {iter, rec};
-
-int calc_pow(int b, int e, int t, struct timespec *diff)
+uint32_t calc_pow(uint32_t b, uint32_t e, uint32_t t, uint64_t *diff)
 {
-    struct timespec start, end;
-    clock_gettime(CLOCK_MONOTONIC, &start);
-    int ret = pw[t](b, e);
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    timespec_diff(&start,&end,diff);
+    uint64_t start, end;
+    start=get_cpu_usecs();
+    uint32_t ret = pw[t](b, e);
+    end=get_cpu_usecs();
+    *diff=end-start;
 
     return ret;
 }
 
 int main(void)
 {
-    int t=0;
-    struct timespec diff;
-    int ret=calc_pow(2, 3, t, diff);
-    printf("%ld\n", (long)diff.tv_nsec);
-    printf("%i\n", ret);
+    uint64_t diff_iter, diff_rec;
+    for(int i=0;i<100;i++){
+    uint32_t ret_iter=calc_pow(2, 400, 0, &diff_iter);
+    uint32_t ret_rec=calc_pow(2, 400, 1, &diff_rec);
+    printf("diff_iter: %lld usec result=%lu\n", diff_iter, ret_iter);
+    printf("diff_rec: %lld usec result=%lu\n", diff_rec, ret_rec);}
     return 0;
 }
 

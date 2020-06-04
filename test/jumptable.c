@@ -2,16 +2,11 @@
 
 #define DESIGN_PATTERN 0
 
-void func0 (void) { }
-void func1 (void) { }
+// void returning jumtables can't be analyzed!?
+int func0 (void) { return 0; }
+int func1 (void) { return 0; }
 
-typedef struct
-{
-  void (*func0)(void);
-  void (*func1)(void);
-}  funcptrs;
-
-void (*pf[])(void) = {func0, func1};
+int (*pf[])(void) = {func0, func1};
 
 // original jumptable function
 void jumpTable(int c)
