@@ -105,6 +105,14 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     set_target_properties(patmos_test_function_ptr_bin
         PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_function_ptr.pml"
     )
+    add_executable(patmos_test_function_ptr_void_bin test/function_ptr_void.c)
+    set_target_properties(patmos_test_function_ptr_void_bin
+        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_function_ptr_void.pml"
+    )
+    add_executable(patmos_test_function_ptr_int_bin test/function_ptr_int.c)
+    set_target_properties(patmos_test_function_ptr_int_bin
+        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_function_ptr_int.pml"
+    )
 
     # test sample - function while loop
     add_executable(patmos_test_while_loop_bin test/while_loop.c)
@@ -156,13 +164,36 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         COMMAND platin wcet -i wcet_jumptable.pml -b patmos_open62541/patmos_test_jumptable_bin -e jumpTable_test --report
         #COMMAND platin visualize -i wcet_jumptable.pml -f jumpTable_test --show-calls --show-timings --graphviz-format png -O test/
     )
-    add_custom_target(patmos_test_function_ptr
+    add_custom_target(patmos_test_function_ptr_callgraph
         DEPENDS patmos_test_function_ptr_bin copy_ruby_tools
-        COMMENT "Test patmos function_ptr"
-        #COMMAND platin wcet -i wcet_function_ptr.pml -b patmos_open62541/patmos_test_function_ptr_bin -e main --report
+        COMMENT "Create patmos function_ptr callgraph"
         COMMAND platin visualize -i wcet_function_ptr.pml -f functionPtr_test --show-calls --show-timings --graphviz-format png -O test/
     )
-
+    add_custom_target(patmos_test_function_ptr_wcet
+        DEPENDS patmos_test_function_ptr_bin copy_ruby_tools
+        COMMENT "Calculate patmos function_ptr WCET"
+        COMMAND platin wcet -i wcet_function_ptr.pml -b patmos_open62541/patmos_test_function_ptr_bin -e functionPtr_test --report
+    )
+    add_custom_target(patmos_test_function_ptr_void_callgraph
+        DEPENDS patmos_test_function_ptr_void_bin copy_ruby_tools
+        COMMENT "Create patmos function_ptr_void callgraph"
+        COMMAND platin visualize -i wcet_function_ptr_void.pml -f functionPtrVoid_test --show-calls --show-timings --graphviz-format png -O test/
+    )
+    add_custom_target(patmos_test_function_ptr_void_wcet
+        DEPENDS patmos_test_function_ptr_void_bin copy_ruby_tools
+        COMMENT "Calculate patmos function_ptr_void WCET"
+        COMMAND platin wcet -i wcet_function_ptr_void.pml -b patmos_open62541/patmos_test_function_ptr_void_bin -e functionPtrVoid_test --report
+    )
+    add_custom_target(patmos_test_function_ptr_int_callgraph
+        DEPENDS patmos_test_function_ptr_int_bin copy_ruby_tools
+        COMMENT "Create patmos function_ptr_int callgraph"
+        COMMAND platin visualize -i wcet_function_ptr_int.pml -f functionPtrInt_test --show-calls --show-timings --graphviz-format png -O test/
+    )
+    add_custom_target(patmos_test_function_ptr_int_wcet
+        DEPENDS patmos_test_function_ptr_int_bin copy_ruby_tools
+        COMMENT "Calculate patmos function_ptr_int WCET"
+        COMMAND platin wcet -i wcet_function_ptr_int.pml -b patmos_open62541/patmos_test_function_ptr_int_bin -e functionPtrInt_test --report
+    )
     add_custom_target(patmos_test_while_loop
         DEPENDS patmos_test_while_loop_bin copy_ruby_tools
         COMMENT "Test patmos while_loop"
