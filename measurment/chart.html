@@ -58,7 +58,7 @@ var svg = d3.select("#chart")
 d3.csv("wcet_usec.csv", function(data) {
 
   var x = d3.scaleLinear()
-      .domain([135, 140])
+      .domain([201, 206])
       //.domain([d3.min(data, function(d) { return +d.usec }),d3.max(data, function(d) { return +d.usec })])
       .range([0, width]);
   svg.append("g")
@@ -86,7 +86,8 @@ d3.csv("wcet_usec.csv", function(data) {
         .attr("transform", function(d) { return "translate(" + x(d.x0) + "," + y(d.length) + ")"; })
         .attr("width", function(d) { return x(d.x1) - x(d.x0); })
         .attr("height", function(d) { return height - y(d.length); })
-        .style("fill", function(d){ if(d.x0<140){return "#ffa500"} else {return "#69b3a2"}})
+        .style("fill", function(d){ if(d.x0<140){return "#ffa500"} else {return "orange"}})
+        .style("stroke", function(d){ if(d.x0<140){return "#ffa500"} else {return "orange"}})
 
   svg
     .append("line")
