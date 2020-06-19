@@ -7,7 +7,8 @@ void callback(void) { }
 // original function pointer function
 void functionPtr(void (*callback_ptr)())
 {
-    (*callback_ptr) (); // callback function
+    //(*callback_ptr) (); // callback function
+    if(callback_ptr==&callback) callback(); // switch-case transformation rule
 }
 
 void functionPtr_test(void (*callback_ptr)())

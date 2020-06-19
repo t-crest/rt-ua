@@ -23,6 +23,9 @@
 volatile _SPM int *led_ptr = (volatile _SPM int *) PATMOS_IO_LED;
 volatile _SPM int *gpio_ptr = (volatile _SPM int *) PATMOS_IO_GPIO;
 
+// Measure execution time with the clock cycle timer
+volatile _IODEV int *timer_ptr = (volatile _IODEV int *) (PATMOS_IO_TIMER+4);
+
 #endif /* UA_ARCHITECTURE_PATMOS */
 
 UA_NodeId connectionIdent, publishedDataSetIdent, writerGroupIdent;
@@ -263,23 +266,23 @@ int main(void) {
 #ifdef UA_ARCHITECTURE_PATMOS
     printf("CPU frequency: %d MHz\n", get_cpu_freq()/1000000);
 
-    uint64_t start, end, diff;
+    int start, end, diff;
     
-    for(int i=0;i<100;i++)
+    for(int i=0;i<1000;i++)
     {
         usleep(10);
         valueUpdateCallback(pubServer, pubData);
 
-        start=get_cpu_usecs();
+        start = *timer_ptr;
         *led_ptr = 0xffff;
         *gpio_ptr = 0xffff;
         pubCallback(pubServer, pubData);
         *led_ptr=0x0;
         *gpio_ptr=0x0;
-        end=get_cpu_usecs();
+        end = *timer_ptr;
 
         diff=end-start;
-        printf("Time: %llu usec\n", diff);
+        printf("%f\n", diff*12.5/1000.0);
     }
     return EXIT_SUCCESS;
 #endif
