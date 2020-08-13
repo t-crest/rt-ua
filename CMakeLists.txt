@@ -126,6 +126,12 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_for_loop.pml"
     )
 
+    # test sample - memcpy
+    add_executable(patmos_test_memcpy_bin test/memcpy.c)
+    set_target_properties(patmos_test_memcpy_bin
+        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_memcpy.pml"
+    )
+
     add_custom_target(flash
         DEPENDS patmos_open62541
         COMMENT "Build binary for flashing altde2 board"
@@ -208,6 +214,14 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         #COMMAND platin wcet -i wcet_for_loop.pml -b patmos_open62541/patmos_test_for_loop_bin -e for_loop_test --report
         COMMAND platin visualize -i wcet_for_loop.pml -f for_loop_test --show-calls --show-timings --graphviz-format png -O test/
         #COMMAND pasim patmos_open62541/patmos_test_for_loop_bin
+    )
+
+    add_custom_target(patmos_test_memcpy
+        DEPENDS patmos_test_memcpy_bin copy_ruby_tools
+        COMMENT "Test patmos memcpy"
+        #COMMAND platin wcet -i wcet_memcpy.pml -b patmos_open62541/patmos_test_memcpy_bin -e memcpy_test --report
+        #COMMAND platin visualize -i wcet_memcpy.pml -f memcpy_test --show-calls --show-timings --graphviz-format png -O test/
+        COMMAND pasim patmos_open62541/patmos_test_memcpy_bin
     )
 
     add_custom_target(patmos_tests

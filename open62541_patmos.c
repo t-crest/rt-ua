@@ -151,6 +151,7 @@ valueUpdateCallback(UA_Server *server, void *data) {
 int main(void) {
     //signal(SIGINT, stopHandler);
     //signal(SIGTERM, stopHandler);
+    *led_ptr=0xffff;
 
     #ifdef UA_ARCHITECTURE_PATMOS
         static unsigned char my_ip[4] = {192, 168, 2, 2};
@@ -266,7 +267,7 @@ int main(void) {
 #ifdef UA_ARCHITECTURE_PATMOS
     printf("CPU frequency: %d MHz\n", get_cpu_freq()/1000000);
 
-    int start, end, diff;
+    volatile int start, end, diff;
     
     for(int i=0;i<1000;i++)
     {
@@ -274,15 +275,15 @@ int main(void) {
         valueUpdateCallback(pubServer, pubData);
 
         start = *timer_ptr;
-        *led_ptr = 0xffff;
-        *gpio_ptr = 0xffff;
+        *led_ptr = 0x0;
+        //*gpio_ptr = 0xffff;
         pubCallback(pubServer, pubData);
-        *led_ptr=0x0;
-        *gpio_ptr=0x0;
+        *led_ptr=0xffff;
+        //*gpio_ptr=0x0;
         end = *timer_ptr;
 
         diff=end-start;
-        printf("%f\n", diff*12.5/1000.0);
+        printf("%f\n", ((float)diff)*12.5/1000.0 );
     }
     return EXIT_SUCCESS;
 #endif
