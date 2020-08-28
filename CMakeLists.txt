@@ -132,6 +132,12 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_memcpy.pml"
     )
 
+    # test sample - pack754
+    add_executable(patmos_test_pack754_bin test/pack754.c)
+    set_target_properties(patmos_test_pack754_bin
+        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_pack754.pml"
+    )
+
     add_custom_target(flash
         DEPENDS patmos_open62541
         COMMENT "Build binary for flashing altde2 board"
@@ -222,6 +228,14 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         #COMMAND platin wcet -i wcet_memcpy.pml -b patmos_open62541/patmos_test_memcpy_bin -e memcpy_test --report
         #COMMAND platin visualize -i wcet_memcpy.pml -f memcpy_test --show-calls --show-timings --graphviz-format png -O test/
         COMMAND pasim patmos_open62541/patmos_test_memcpy_bin
+    )
+
+    add_custom_target(patmos_test_pack754
+        DEPENDS patmos_test_pack754_bin copy_ruby_tools
+        COMMENT "Test patmos pack754"
+        #COMMAND platin wcet -i wcet_pack754.pml -b patmos_open62541/patmos_test_pack754_bin -e pack754_test --report
+        #COMMAND platin visualize -i wcet_pack754.pml -f pack754_test --show-calls --show-timings --graphviz-format png -O test/
+        COMMAND pasim patmos_open62541/patmos_test_pack754_bin
     )
 
     add_custom_target(patmos_tests
