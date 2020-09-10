@@ -175,43 +175,8 @@ add_custom_target(patmos_test_paper_example_transformed_flash
     COMMAND cd ${PATMOSHOME} && make config BOARD=altde2-all && cd - && sleep 1 && patserdow -v ${SERIAL} patmos_test_paper_example_transformed_bin
 )
 
+add_custom_target(patmos_test_paper_example_transformed_sim
+    DEPENDS patmos_test_paper_example_transformed_bin
+    COMMAND pasim patmos_test_paper_example_transformed_bin
+)
 
-if("${UA_ARCHITECTURE}" STREQUAL "patmos")
-    file(GLOB patmos_libeth_src ${LIBETH}/*.c)
-    add_library(patmos_libeth ${patmos_libeth_src})
-    target_link_libraries(patmos_open62541 PUBLIC patmos_libeth)
-
-    add_executable(patmos_open62541_wcet ${PATMOS_OPEN62541_SOURCE_FILES})
-    target_include_directories(patmos_open62541_wcet PUBLIC ~/t-crest/patmos/c/ethlib)
-    target_link_libraries(patmos_open62541_wcet PUBLIC
-        open62541 m)
-    target_link_libraries(patmos_open62541_wcet PUBLIC patmos_libeth)
-
-	#set_target_properties(patmos_open62541 PROPERTIES COMPILE_FLAGS "-target patmos-unknown-unknown-elf -mpatmos-disable-vliw")
-    set_target_properties(patmos_open62541
-        PROPERTIES LINK_FLAGS "-O2 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet.pml"
-    )
-    set_target_properties(patmos_open62541_wcet
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet.pml"
-    )
-    target_include_directories(patmos_open62541 PUBLIC ~/t-crest/patmos/c/ethlib)
-
-    add_custom_target(patmos_test_while_loop
-        DEPENDS patmos_test_while_loop_bin copy_ruby_tools
-        COMMENT "Test patmos while_loop"
-        #COMMAND platin wcet -i wcet_while_loop.pml -b patmos_open62541/patmos_test_while_loop_bin -e while_loop_test --report
-        #COMMAND platin visualize -i wcet_while_loop.pml -f while_loop_test --show-calls --show-timings --graphviz-format png -O 
-        COMMAND pasim patmos_open62541/patmos_test_while_loop_bin
-    )
-
-    add_custom_target(patmos_test_for_loop
-        DEPENDS patmos_test_for_loop_bin copy_ruby_tools
-        COMMENT "Test patmos for_loop"
-        #COMMAND platin wcet -i wcet_for_loop.pml -b patmos_open62541/patmos_test_for_loop_bin -e for_loop_test --report
-        COMMAND platin visualize -i wcet_for_loop.pml -f for_loop_test --show-calls --show-timings --graphviz-format png -O 
-        #COMMAND pasim patmos_open62541/patmos_test_for_loop_bin
-    )
-
-
-endif()
-#file(COPY config.cfg DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
