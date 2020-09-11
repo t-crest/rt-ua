@@ -1,6 +1,11 @@
 #include <stdio.h>
 
-int callback(void) { return 3; }
+int callback1(void) __attribute__((noinline));
+int callback2(void) __attribute__((noinline));
+int functionPtrInt_test(int (*callback_ptr)()) __attribute__((noinline));
+
+int callback1(void) { return 3; }
+int callback2(void) { return 4; }
 
 int functionPtrInt_test(int (*callback_ptr)())
 {
@@ -10,7 +15,10 @@ int functionPtrInt_test(int (*callback_ptr)())
 //Callback added in main()
 int main(int argc, char *argv[])
 {
-    functionPtrInt_test(&callback);
+    if(argc%2 == 0)
+        functionPtrInt_test(&callback1);
+    else
+        functionPtrInt_test(&callback2);
 
     return 0;
 }

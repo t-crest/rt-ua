@@ -77,7 +77,7 @@ add_custom_target(patmos_test_function_ptr_void_visualize
 
 add_custom_target(patmos_test_function_ptr_void_wcet
     DEPENDS patmos_test_function_ptr_void_bin
-    COMMAND platin wcet -i wcet_function_ptr.pml -b patmos_test_function_ptr_void_bin -e functionPtr_test --report
+    COMMAND platin wcet -i wcet_function_ptr_void.pml -b patmos_test_function_ptr_void_bin -e functionPtrVoid_test --report
 )
 
 # test sample - function ptr int
