@@ -33,19 +33,19 @@ add_custom_target(patmos_test_recursion_wcet
 )
 
 # test samples - jumptable
-add_executable(patmos_test_jumptable_bin jumptable.c)
-set_target_properties(patmos_test_jumptable_bin
+add_executable(patmos_test_jumptable_int_bin jumptable_int.c)
+set_target_properties(patmos_test_jumptable_int_bin
     PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_jumptable.pml"
 )
 
-add_custom_target(patmos_test_jumptable_visualize
-    DEPENDS patmos_test_jumptable_bin copy_ruby_tools
-    COMMAND platin visualize -i wcet_jumptable.pml -f jumpTable_test --show-calls --show-timings --graphviz-format png -O call_graphs
+add_custom_target(patmos_test_jumptable_int_visualize
+    DEPENDS patmos_test_jumptable_int_bin copy_ruby_tools
+    COMMAND platin visualize -i wcet_jumptable.pml -f jumpTableInt_test --show-calls --show-timings --graphviz-format png -O call_graphs
 )
 
-add_custom_target(patmos_test_jumptable_wcet
-    DEPENDS patmos_test_jumptable_bin
-    COMMAND platin wcet -i wcet_jumptable.pml -b patmos_test_jumptable_bin -e jumpTable_test --report
+add_custom_target(patmos_test_jumptable_int_wcet
+    DEPENDS patmos_test_jumptable_int_bin
+    COMMAND platin wcet -i wcet_jumptable.pml -b patmos_test_jumptable_int_bin -e jumpTableInt_test --report
 )
 
 # test samples - jumptable void
@@ -62,6 +62,38 @@ add_custom_target(patmos_test_jumptable_void_visualize
 add_custom_target(patmos_test_jumptable_void_wcet
     DEPENDS patmos_test_jumptable_void_bin
     COMMAND platin wcet -i wcet_jumptable_void.pml -b patmos_test_jumptable_void_bin -e jumpTableVoid_test --report
+)
+
+# test samples - jumptable void param
+add_executable(patmos_test_jumptable_void_param_bin jumptable_void_param.c)
+set_target_properties(patmos_test_jumptable_void_param_bin
+    PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_jumptable_void_param.pml"
+)
+
+add_custom_target(patmos_test_jumptable_void_param_visualize
+    DEPENDS patmos_test_jumptable_void_param_bin copy_ruby_tools
+    COMMAND platin visualize -i wcet_jumptable_void_param.pml -f main --show-calls --show-timings --graphviz-format png -O call_graphs
+)
+
+add_custom_target(patmos_test_jumptable_void_param_wcet
+    DEPENDS patmos_test_jumptable_void_param_bin
+    COMMAND platin wcet -i wcet_jumptable_void_param.pml -b patmos_test_jumptable_void_param_bin -e jumpTable_test --report
+)
+
+# test samples - jumptable void refparam
+add_executable(patmos_test_jumptable_void_refparam_bin jumptable_void_refparam.c)
+set_target_properties(patmos_test_jumptable_void_refparam_bin
+    PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_jumptable_void_refparam.pml"
+)
+
+add_custom_target(patmos_test_jumptable_void_refparam_visualize
+    DEPENDS patmos_test_jumptable_void_refparam_bin copy_ruby_tools
+    COMMAND platin visualize -i wcet_jumptable_void_refparam.pml -f main --show-calls --show-timings --graphviz-format png -O call_graphs
+)
+
+add_custom_target(patmos_test_jumptable_void_refparam_wcet
+    DEPENDS patmos_test_jumptable_void_refparam_bin
+    COMMAND platin wcet -i wcet_jumptable_void_refparam.pml -b patmos_test_jumptable_void_refparam_bin -e jumpTableRefparam_test --report
 )
 
 # test sample - function ptr
@@ -88,7 +120,7 @@ set_target_properties(patmos_test_function_ptr_void_bin
 
 add_custom_target(patmos_test_function_ptr_void_visualize
     DEPENDS patmos_test_function_ptr_void_bin copy_ruby_tools
-    COMMAND platin visualize -i wcet_function_ptr_void.pml -f functionPtrVoid_test --show-calls --show-timings --graphviz-format png -O call_graphs
+    COMMAND platin visualize -i wcet_function_ptr_void.pml -f main --show-calls --show-timings --graphviz-format png -O call_graphs
 )
 
 add_custom_target(patmos_test_function_ptr_void_wcet
@@ -195,4 +227,79 @@ add_custom_target(patmos_test_paper_example_transformed_sim
     DEPENDS patmos_test_paper_example_transformed_bin
     COMMAND pasim patmos_test_paper_example_transformed_bin
 )
+
+# test samples - paper example2 original; will not compile for patmos
+add_executable(patmos_test_paper_example2_original_bin paper_example2_original.c)
+set_target_properties(patmos_test_paper_example2_original_bin
+    PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_paper_example2_original.pml"
+)
+
+add_custom_target(patmos_test_paper_example2_original_visualize
+    DEPENDS patmos_test_paper_example2_original_bin copy_ruby_tools
+    COMMAND platin visualize -i wcet_paper_example2_original.pml -f measure_time --show-calls --show-timings --graphviz-format png -O call_graphs
+)
+
+add_custom_target(patmos_test_paper_example2_original_wcet
+    DEPENDS patmos_test_paper_example2_original_bin
+    COMMAND platin wcet -i wcet_paper_example2_original.pml -b patmos_test_paper_example2_original_bin -e measure_time --report
+)
+
+add_custom_target(patmos_test_paper_example2_original_flash
+    DEPENDS patmos_test_paper_example2_original_bin
+    COMMAND cd ${PATMOSHOME} && make config BOARD=altde2-all && cd - && sleep 1 && patserdow -v ${SERIAL} patmos_test_paper_example2_original_bin
+)
+
+# test samples - paper example2 intermediate (only changes required to generate the call graph have been applied); visualize should be possible but WCET analysis should fail
+add_executable(patmos_test_paper_example2_intermediate_bin paper_example2_intermediate.c)
+set_target_properties(patmos_test_paper_example2_intermediate_bin
+    PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_paper_example2_intermediate.pml"
+)
+
+add_custom_target(patmos_test_paper_example2_intermediate_visualize
+    DEPENDS patmos_test_paper_example2_intermediate_bin copy_ruby_tools
+    COMMAND platin visualize -i wcet_paper_example2_intermediate.pml -f measure_time --show-calls --show-timings --graphviz-format png -O call_graphs
+)
+
+add_custom_target(patmos_test_paper_example2_intermediate_wcet
+    DEPENDS patmos_test_paper_example2_intermediate_bin
+    COMMAND platin wcet -i wcet_paper_example2_intermediate.pml -b patmos_test_paper_example2_intermediate_bin -e measure_time --report
+)
+
+add_custom_target(patmos_test_paper_example2_intermediate_flash
+    DEPENDS patmos_test_paper_example2_intermediate_bin
+    COMMAND cd ${PATMOSHOME} && make config BOARD=altde2-all && cd - && sleep 1 && patserdow -v ${SERIAL} patmos_test_paper_example2_intermediate_bin
+)
+
+add_custom_target(patmos_test_paper_example2_intermediate_sim
+    DEPENDS patmos_test_paper_example2_intermediate_bin
+    COMMAND pasim patmos_test_paper_example2_intermediate_bin
+)
+
+# test samples - paper example2 transformed
+add_executable(patmos_test_paper_example2_transformed_bin paper_example2_transformed.c)
+
+set_target_properties(patmos_test_paper_example2_transformed_bin
+    PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_paper_example2_transformed.pml"
+)
+
+add_custom_target(patmos_test_paper_example2_transformed_visualize
+    DEPENDS patmos_test_paper_example2_transformed_bin copy_ruby_tools
+    COMMAND platin visualize -i wcet_paper_example2_transformed.pml -f measure_time --show-calls --show-timings --graphviz-format png -O call_graphs
+)
+
+add_custom_target(patmos_test_paper_example2_transformed_wcet
+    DEPENDS patmos_test_paper_example2_transformed_bin
+    COMMAND platin wcet -i wcet_paper_example2_transformed.pml -b patmos_test_paper_example2_transformed_bin -e measure_time --report
+)
+
+add_custom_target(patmos_test_paper_example2_transformed_flash
+    DEPENDS patmos_test_paper_example2_transformed_bin
+    COMMAND cd ${PATMOSHOME} && make config BOARD=altde2-all && cd - && sleep 1 && patserdow -v ${SERIAL} patmos_test_paper_example2_transformed_bin
+)
+
+add_custom_target(patmos_test_paper_example2_transformed_sim
+    DEPENDS patmos_test_paper_example2_transformed_bin
+    COMMAND pasim patmos_test_paper_example2_transformed_bin
+)
+
 
