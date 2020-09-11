@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 int callback1(void) __attribute__((noinline));
 int callback2(void) __attribute__((noinline));
 int functionPtrInt_test(int (*callback_ptr)()) __attribute__((noinline));
