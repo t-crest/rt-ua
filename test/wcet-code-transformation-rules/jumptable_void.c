@@ -1,6 +1,4 @@
-#include <stdio.h>
-
-#define DESIGN_PATTERN 0
+#define DESIGN_PATTERN 1
 
 // void returning jumtables can't be analyzed!?
 void func0 (void) { ; }
@@ -8,7 +6,7 @@ void func1 (void) { ; }
 
 void (*pf[])(void) = {func0, func1};
 
-#if DESIGN_PATTERN
+#if DESIGN_PATTERN == 1
 // jump table with design pattern applied
 void jumpTableVoid(int c)
 {
