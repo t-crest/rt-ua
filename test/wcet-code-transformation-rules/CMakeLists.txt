@@ -48,6 +48,22 @@ add_custom_target(patmos_test_jumptable_wcet
     COMMAND platin wcet -i wcet_jumptable.pml -b patmos_test_jumptable_bin -e jumpTable_test --report
 )
 
+# test samples - jumptable void
+add_executable(patmos_test_jumptable_void_bin jumptable_void.c)
+set_target_properties(patmos_test_jumptable_void_bin
+    PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_jumptable_void.pml"
+)
+
+add_custom_target(patmos_test_jumptable_void_visualize
+    DEPENDS patmos_test_jumptable_void_bin copy_ruby_tools
+    COMMAND platin visualize -i wcet_jumptable_void.pml -f jumpTableVoid_test --show-calls --show-timings --graphviz-format png -O call_graphs
+)
+
+add_custom_target(patmos_test_jumptable_void_wcet
+    DEPENDS patmos_test_jumptable_void_bin
+    COMMAND platin wcet -i wcet_jumptable_void.pml -b patmos_test_jumptable_void_bin -e jumpTableVoid_test --report
+)
+
 # test sample - function ptr
 add_executable(patmos_test_function_ptr_bin function_ptr.c)
 set_target_properties(patmos_test_function_ptr_bin
