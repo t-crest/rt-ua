@@ -50,12 +50,6 @@ add_custom_target(patmos_measurment_analyze
     COMMAND ./patmos_open62541/patmos_time_analyze ../measurment/logic_analyzer_24MHz.csv > ../measurment/wcet_usec.csv
 )
 
-# test samples - paper example
-add_executable(patmos_test_paper_example_bin test/paper_example.c)
-set_target_properties(patmos_test_paper_example_bin
-    PROPERTIES LINK_FLAGS "-O0"
-)
-
 add_custom_target(patmos_test_paper_example
     DEPENDS patmos_test_paper_example_bin
     COMMENT "Test patmos paper example"
@@ -66,6 +60,14 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     file(GLOB patmos_libeth_src ${LIBETH}/*.c)
     add_library(patmos_libeth ${patmos_libeth_src})
     target_link_libraries(patmos_open62541 PUBLIC patmos_libeth)
+
+    add_executable(pubsub_subscriber_patmos pubsub_subscriber_patmos.c)
+    target_include_directories(pubsub_subscriber_patmos PUBLIC ~/t-crest/patmos/c/ethlib)
+    set_target_properties(pubsub_subscriber_patmos
+        PROPERTIES LINK_FLAGS "-O2 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_subscriber.pml"
+    )
+    target_link_libraries(pubsub_subscriber_patmos PUBLIC
+        open62541 m patmos_libeth)
 
     add_executable(patmos_open62541_wcet ${PATMOS_OPEN62541_SOURCE_FILES})
     target_include_directories(patmos_open62541_wcet PUBLIC ~/t-crest/patmos/c/ethlib)
@@ -82,66 +84,25 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     )
     target_include_directories(patmos_open62541 PUBLIC ~/t-crest/patmos/c/ethlib)
 
-    # test samples - paper example transformed
-    add_executable(patmos_test_paper_example_transform_bin test/paper_example_transform.c)
-    set_target_properties(patmos_test_paper_example_transform_bin
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_paper_example_transformed.pml"
-    )
-
-    # test samples - recusrion
-    add_executable(patmos_test_recursion_bin test/recursion.c)
-    set_target_properties(patmos_test_recursion_bin
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_recursion.pml"
-    )
-
-    # test samples - jumptable
-    add_executable(patmos_test_jumptable_bin test/jumptable.c)
-    set_target_properties(patmos_test_jumptable_bin
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_jumptable.pml"
-    )
-
-    # test sample - function ptr
-    add_executable(patmos_test_function_ptr_bin test/function_ptr.c)
-    set_target_properties(patmos_test_function_ptr_bin
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_function_ptr.pml"
-    )
-    add_executable(patmos_test_function_ptr_void_bin test/function_ptr_void.c)
-    set_target_properties(patmos_test_function_ptr_void_bin
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_function_ptr_void.pml"
-    )
-    add_executable(patmos_test_function_ptr_int_bin test/function_ptr_int.c)
-    set_target_properties(patmos_test_function_ptr_int_bin
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_function_ptr_int.pml"
-    )
-
-    # test sample - function while loop
-    add_executable(patmos_test_while_loop_bin test/while_loop.c)
-    set_target_properties(patmos_test_while_loop_bin
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_while_loop.pml"
-    )
-
-    # test sample - function for loop
-    add_executable(patmos_test_for_loop_bin test/for_loop.c)
-    set_target_properties(patmos_test_for_loop_bin
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_for_loop.pml"
-    )
-
-    # test sample - memcpy
-    add_executable(patmos_test_memcpy_bin test/memcpy.c)
-    set_target_properties(patmos_test_memcpy_bin
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_memcpy.pml"
-    )
-
-    # test sample - pack754
-    add_executable(patmos_test_pack754_bin test/pack754.c)
-    set_target_properties(patmos_test_pack754_bin
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_pack754.pml"
-    )
-
     add_custom_target(flash
         DEPENDS patmos_open62541
         COMMENT "Build binary for flashing altde2 board"
         COMMAND cd ${PATMOSHOME} && make config BOARD=altde2-all && cd - && sleep 1 && patserdow -v ${SERIAL} patmos_open62541/patmos_open62541
+    )
+    add_custom_target(flash_subscriber
+        DEPENDS pubsub_subscriber_patmos
+        COMMENT "Build binary for flashing altde2 board"
+        COMMAND cd ${PATMOSHOME} && make config BOARD=altde2-all && cd - && sleep 1 && patserdow -v ${SERIAL} patmos_open62541/pubsub_subscriber_patmos
+    )
+    add_custom_target(wcet_subscriber
+        DEPENDS pubsub_subscriber_patmos copy_ruby_tools
+        COMMENT "Build binary for WCET analysis"
+        COMMAND platin wcet -i wcet_subscriber.pml -b patmos_open62541/patmos_open62541_wcet -e subscriberListen --report
+    )
+    add_custom_target(analyze_subscriber
+        DEPENDS pubsub_subscriber_patmos copy_ruby_tools
+        COMMENT "Visualize WCET"
+        COMMAND platin visualize -i wcet_subscriber.pml -f subscriberListen --show-calls --show-timings --graphviz-format png -O wcet/
     )
     add_custom_target(copy_ruby_tools
         COMMENT "Copy WCET tools"

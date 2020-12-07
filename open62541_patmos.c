@@ -151,9 +151,10 @@ valueUpdateCallback(UA_Server *server, void *data) {
 int main(void) {
     //signal(SIGINT, stopHandler);
     //signal(SIGTERM, stopHandler);
-    *led_ptr=0xffff;
 
     #ifdef UA_ARCHITECTURE_PATMOS
+        *led_ptr=0xffff;
+
         static unsigned char my_ip[4] = {192, 168, 2, 2};
         eth_mac_initialize();
         arp_table_init();

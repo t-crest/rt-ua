@@ -33,23 +33,24 @@ uint32_t pop()
 	}
 }
 
-uint32_t iter(uint32_t b, uint32_t e)
+void iter(uint32_t b, uint32_t e, uint32_t *ret)
 {
     int pow=1;
 
-    if(e>MAX) return 0;
+    if(e>MAX) {*ret=0; return;}
 
     _Pragma("loopbound min 0 max MAX")
     for(uint32_t i=0;i<e;i++)
         pow=pow*b;
-    return pow;
+
+    *ret = pow;
 }
 
-uint32_t rec(uint32_t b, uint32_t e)
+void rec(uint32_t b, uint32_t e, uint32_t *ret)
 {
-    uint32_t ret=1;
+    uint32_t pow=1;
 
-    if(e>MAX) return 0;
+    if(e>MAX) {*ret=0; return;}
 
     _Pragma("loopbound min 0 max MAX")
     for(uint32_t i=e;i>0;i--)
@@ -57,18 +58,19 @@ uint32_t rec(uint32_t b, uint32_t e)
 
     _Pragma("loopbound min 0 max MAX")
     for(uint32_t i=e;i>0;i--)
-        ret=ret*pop();
+        pow=pow*pop();
 
-    return ret;
+    *ret = pow;
 }
 
-uint32_t (*pw[])(uint32_t b, uint32_t e) = {iter, rec};
+void (*pw[])(uint32_t b, uint32_t e, uint32_t *ret) = {iter, rec};
 
 uint32_t calc_pow(uint32_t b, uint32_t e, uint32_t t, uint64_t *diff)
 {
     uint64_t start, end;
     start=get_cpu_usecs();
-    uint32_t ret = pw[t](b, e);
+    uint32_t ret = 0;
+    pw[t](b, e, &ret);
     end=get_cpu_usecs();
     *diff=end-start;
 
