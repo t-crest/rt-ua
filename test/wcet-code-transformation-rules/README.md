@@ -1,7 +1,6 @@
 # rt-UA tests
-Contains some small test examples to get familiar with the toolchain and test how WCET analysis behaves for certain small but challenging examples.
 
-## Getting Started
+Contains some small test examples to get familiar with the toolchain and test how WCET analysis behaves for certain small but challenging examples.
 
 ### Prerequisites
 
@@ -23,12 +22,12 @@ cd build-patmos
 cmake -DCMAKE_TOOLCHAIN_FILE=../Toolchain-patmos.cmake ..
 ```
 
-### Build for Ubuntu
+### Create call graph
 
 ```shell
-mkdir build
-cd build
+# for the call graph of recursion.c use
+make patmos_test_recursion_visualize
 
-cmake ..
 ```
 
+### 
