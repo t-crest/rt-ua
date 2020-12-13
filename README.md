@@ -5,7 +5,7 @@ Real-Time OPC UA Pub/Sub implementaion using the open62541 library on Patmos.
 
 ### Prerequisites
 
-Download the Patmos Ubuntu Development VM from http://patmos.compute.dtu.dk/
+Download the Patmos Ubuntu Development VM from http://patmos.compute.dtu.dk/ or or follow the installation instructions on https://github.com/t-crest/patmos
 
 ## Installing
 
@@ -17,6 +17,15 @@ Install the Development VM and login with the Username and Password **patmos**. 
 cd ~/t-crest/patmos/
 
 git pull
+```
+
+### Add TCRESTHOME environment variable
+
+Add the following lines to your ~/.bashrc
+
+```shell
+export PATH=$PATH:$HOME/t-crest/local/bin
+export TCRESTHOME=$HOME/t-crest
 ```
 
 ### Build for Patmos

@@ -1,8 +1,8 @@
-#cmake .. -DCMAKE_C_COMPILER=/home/patmos/t-crest/local/bin/patmos-clang -DCMAKE_CXX_COMPILER=/home/patmos/t-crest/local/bin/patmos-clang++
 # for cross-compiling for Patmos  use the comand "cmake -DCMAKE_TOOLCHAIN_FILE=../Toolchain-patmos.cmake .."
 
 cmake_minimum_required(VERSION 2.6)
 
+project(rt-UA)
 
 set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "Verbose Makefile")
 
@@ -57,12 +57,12 @@ add_custom_target(patmos_test_paper_example
 )
 
 if("${UA_ARCHITECTURE}" STREQUAL "patmos")
+    set(CMAKE_VERBOSE_MAKEFILE ON)
     file(GLOB patmos_libeth_src ${LIBETH}/*.c)
     add_library(patmos_libeth ${patmos_libeth_src})
     target_link_libraries(patmos_open62541 PUBLIC patmos_libeth)
 
     add_executable(pubsub_subscriber_patmos pubsub_subscriber_patmos.c)
-    target_include_directories(pubsub_subscriber_patmos PUBLIC ~/t-crest/patmos/c/ethlib)
     set_target_properties(pubsub_subscriber_patmos
         PROPERTIES LINK_FLAGS "-O2 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_subscriber.pml"
     )
@@ -70,7 +70,6 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
         open62541 m patmos_libeth)
 
     add_executable(patmos_open62541_wcet ${PATMOS_OPEN62541_SOURCE_FILES})
-    target_include_directories(patmos_open62541_wcet PUBLIC ~/t-crest/patmos/c/ethlib)
     target_link_libraries(patmos_open62541_wcet PUBLIC
         open62541 m)
     target_link_libraries(patmos_open62541_wcet PUBLIC patmos_libeth)
@@ -82,7 +81,7 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     set_target_properties(patmos_open62541_wcet
         PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet.pml"
     )
-    target_include_directories(patmos_open62541 PUBLIC ~/t-crest/patmos/c/ethlib)
+    target_include_directories(patmos_open62541 PUBLIC $ENV{TCRESTHOME}/patmos/c/ethlib)
 
     add_custom_target(flash
         DEPENDS patmos_open62541
@@ -106,7 +105,7 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     )
     add_custom_target(copy_ruby_tools
         COMMENT "Copy WCET tools"
-        COMMAND cp ../tools/visualize.rb /home/patmos/t-crest/local/lib/platin/tools/visualize.rb && cp ../tools/scopegraph.rb /home/patmos/t-crest/local/lib/platin/analysis/scopegraph.rb
+        COMMAND cp ../tools/visualize.rb $ENV{TCRESTHOME}/local/lib/platin/tools/visualize.rb && cp ../tools/scopegraph.rb $ENV{TCRESTHOME}/local/lib/platin/analysis/scopegraph.rb
     )
     add_custom_target(wcet
         DEPENDS patmos_open62541_wcet copy_ruby_tools
