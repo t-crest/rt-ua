@@ -1,7 +1,6 @@
-set(CMAKE_C_COMPILER /home/patmos/t-crest/local/bin/patmos-clang)
-set(CMAKE_CXX_COMPILER /home/patmos/t-crest/local/bin/patmos-clang++)
+set(CMAKE_C_COMPILER patmos-clang)
+set(CMAKE_CXX_COMPILER patmos-clang++)
 
-set(PATMOSHOME /home/patmos/t-crest/patmos)
 set(LIBETH ${PATMOSHOME}/c/ethlib)
 set(SERIAL /dev/ttyUSB0)
 

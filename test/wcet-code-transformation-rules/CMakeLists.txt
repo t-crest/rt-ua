@@ -1,18 +1,19 @@
-#cmake .. -DCMAKE_C_COMPILER=/home/patmos/t-crest/local/bin/patmos-clang -DCMAKE_CXX_COMPILER=/home/patmos/t-crest/local/bin/patmos-clang++
 # for cross-compiling for Patmos  use the comand "cmake -DCMAKE_TOOLCHAIN_FILE=../Toolchain-patmos.cmake .."
 
 cmake_minimum_required(VERSION 2.6)
+
+project(rt-UA)
 
 # create subdirectories for the various cmake targets
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/call_graphs)
 
 set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "Verbose Makefile")
-set(CALLGRAPH_VISUALIATIONS_TOOLS_SRC_FOLDER "../../../tools")
-set(CALLGRAPH_VISUALIATIONS_TOOLS_DST_FOLDER "/home/patmos/t-crest/local/lib/platin/tools")
+set(CALLGRAPH_VISUALIZATIONS_TOOLS_SRC_FOLDER "../../../tools")
+set(CALLGRAPH_VISUALIZATIONS_TOOLS_DST_FOLDER $ENV{TCRESTHOME}/local/lib/platin/tools)
 
 add_custom_target(copy_ruby_tools
     COMMENT "Copy call graph visualization tools"
-    COMMAND cp ${CALLGRAPH_VISUALIATIONS_TOOLS_SRC_FOLDER}/visualize.rb ${CALLGRAPH_VISUALIATIONS_TOOLS_DST_FOLDER}/visualize.rb && cp ${CALLGRAPH_VISUALIATIONS_TOOLS_SRC_FOLDER}/scopegraph.rb ${CALLGRAPH_VISUALIATIONS_TOOLS_DST_FOLDER}/scopegraph.rb
+    COMMAND cp ${CALLGRAPH_VISUALIZATIONS_TOOLS_SRC_FOLDER}/visualize.rb ${CALLGRAPH_VISUALIZATIONS_TOOLS_DST_FOLDER}/visualize.rb && cp ${CALLGRAPH_VISUALIZATIONS_TOOLS_SRC_FOLDER}/scopegraph.rb ${CALLGRAPH_VISUALIZATIONS_TOOLS_DST_FOLDER}/scopegraph.rb
 )
 
 
@@ -22,7 +23,7 @@ set_target_properties(patmos_test_recursion_bin
     PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_recursion.pml"
 )
 
-add_custom_target(patmos_test_recursion_visulize
+add_custom_target(patmos_test_recursion_visualize
     DEPENDS patmos_test_recursion_bin copy_ruby_tools
     COMMAND platin visualize -i wcet_recursion.pml -f main --graphviz-format png -O call_graphs
 )
