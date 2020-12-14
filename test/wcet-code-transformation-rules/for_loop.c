@@ -1,9 +1,6 @@
 #include <stdio.h>
 
-#define DESIGN_PATTERN 1
-#define DEBUG 1
-
-
+#ifndef APPLY_TRANSFORMATION_RULE
 // original for loop function
 int for_loop(int c)
 {
@@ -16,36 +13,29 @@ int for_loop(int c)
     }
     return n;
 }
-
+#else
 // for loop with design pattern applied
-int for_loop_dp(int c)
+int for_loop(int c)
 {
     int i, n = 0;
 
     if(c > 10) return -1;   // check if c ist bigger then max loopbound
 
-    _Pragma("loopbound min 1 max 10")  // maximum 10 for loop itterations
+    _Pragma("loopbound min 1 max 10")  // maximum 10 for loop iterations
     for(i=0;i<c;i++)
     {
         n++;
     }
     return n;
 }
+#endif
 
 void for_loop_test()
 {
     int c = 10;
     int ret = -1;
 
-    #if DESIGN_PATTERN
-        ret = for_loop_dp(c);
-    #else
-        ret = for_loop(c);
-    #endif
-
-    #if DEBUG
-    if(ret == -1) printf("loopbound exceeded\n");
-    #endif
+    ret = for_loop(c);
 }
 
 int main(int argc, char *argv[])

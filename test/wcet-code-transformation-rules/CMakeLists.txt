@@ -13,25 +13,91 @@ set(CALLGRAPH_VISUALIZATIONS_TOOLS_DST_FOLDER $ENV{TCRESTHOME}/local/lib/platin/
 
 add_custom_target(copy_ruby_tools
     COMMENT "Copy call graph visualization tools"
-    COMMAND cp ${CALLGRAPH_VISUALIZATIONS_TOOLS_SRC_FOLDER}/visualize.rb ${CALLGRAPH_VISUALIZATIONS_TOOLS_DST_FOLDER}/visualize.rb && cp ${CALLGRAPH_VISUALIZATIONS_TOOLS_SRC_FOLDER}/scopegraph.rb ${CALLGRAPH_VISUALIZATIONS_TOOLS_DST_FOLDER}/scopegraph.rb
+    COMMAND cp ${CALLGRAPH_VISUALIZATIONS_TOOLS_SRC_FOLDER}/visualize.rb $ENV{TCRESTHOME}/local/lib/platin/tools/visualize.rb && cp ${CALLGRAPH_VISUALIZATIONS_TOOLS_SRC_FOLDER}/scopegraph.rb $ENV{TCRESTHOME}/local/lib/platin/tools/scopegraph.rb && cp ${CALLGRAPH_VISUALIZATIONS_TOOLS_SRC_FOLDER}/scopegraph.rb $ENV{TCRESTHOME}/local/lib/platin/analysis/scopegraph.rb
 )
 
 
-# test samples - recursion
-add_executable(patmos_test_recursion_bin recursion.c)
-set_target_properties(patmos_test_recursion_bin
-    PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_recursion.pml"
+###############################################################################################################################
+# SIMPLE
+###############################################################################################################################
+# the simple example is analyzable as it is
+add_executable(patmos_test_simple_bin simple.c)
+set_target_properties(patmos_test_simple_bin
+    PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=patmos_test_simple.pml"
 )
 
-add_custom_target(patmos_test_recursion_visualize
-    DEPENDS patmos_test_recursion_bin copy_ruby_tools
-    COMMAND platin visualize -i wcet_recursion.pml -f main --graphviz-format png -O call_graphs
+add_custom_target(patmos_test_simple_wcet
+    DEPENDS patmos_test_simple_bin
+    COMMAND platin wcet -i patmos_test_simple.pml -b patmos_test_simple_bin -e foo --report
 )
 
-add_custom_target(patmos_test_recursion_wcet
-    DEPENDS patmos_test_recursion_bin
-    COMMAND platin wcet -i wcet_recursion.pml -b patmos_test_recursion_bin -e main --report
+
+###############################################################################################################################
+# RECURSION
+###############################################################################################################################
+# original
+add_executable(patmos_test_recursion_original_bin recursion.c)
+set_target_properties(patmos_test_recursion_original_bin
+    PROPERTIES LINK_FLAGS "-O0 -mserialize=patmos_test_recursion_original.pml"
 )
+
+add_custom_target(patmos_test_recursion_original_visualize
+    DEPENDS patmos_test_recursion_original_bin copy_ruby_tools
+    COMMAND platin visualize -i patmos_test_recursion_original.pml -f recursion_test --show-calls --show-timings --graphviz-format png -O call_graphs
+)
+
+add_custom_target(patmos_test_recursion_original_wcet
+    DEPENDS patmos_test_recursion_original_bin
+    COMMAND platin wcet -i patmos_test_recursion_original.pml -b patmos_test_recursion_original_bin -e recursion_test --report
+)
+
+add_custom_target(patmos_test_recursion_original_sim
+    DEPENDS patmos_test_recursion_original_bin
+    COMMAND pasim patmos_test_recursion_original_bin
+)
+
+# TODO: implement the following
+# add_executable(patmos_test_recursion_transformed_bin recursion.c)
+# target_compile_definitions(patmos_test_recursion_transformed_bin PUBLIC APPLY_TRANSFORMATION_RULE)
+# set_target_properties(patmos_test_recursion_transformed_bin
+#     PROPERTIES LINK_FLAGS "-O0 -mserialize=patmos_test_recursion_transformed.pml"
+# )
+
+# add_custom_target(patmos_test_recursion_transformed_visualize
+#     DEPENDS patmos_test_recursion_transformed_bin copy_ruby_tools
+#     COMMAND platin visualize -i patmos_test_recursion_transformed.pml -f main --show-calls --show-timings --graphviz-format png -O call_graphs
+# )
+
+# add_custom_target(patmos_test_recursion_transformed_wcet
+#     DEPENDS patmos_test_recursion_transformed_bin
+#     COMMAND platin wcet -i patmos_test_recursion_transformed.pml -b patmos_test_recursion_transformed_bin -e main --report
+# )
+
+# add_custom_target(patmos_test_recursion_transformed_sim
+#     DEPENDS patmos_test_recursion_transformed_bin
+#     COMMAND pasim patmos_test_recursion_transformed_bin
+# )
+
+
+# original
+#add_executable(patmos_test_recursion_bin recursion.c)
+#set_target_properties(patmos_test_recursion_bin
+#    PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_recursion.pml"
+#)
+
+#add_custom_target(patmos_test_recursion_visualize
+#    DEPENDS patmos_test_recursion_bin copy_ruby_tools
+#    COMMAND platin visualize -i wcet_recursion.pml -f main --graphviz-format png -O call_graphs
+#)
+
+#add_custom_target(patmos_test_recursion_wcet
+#    DEPENDS patmos_test_recursion_bin
+#    COMMAND platin wcet -i wcet_recursion.pml -b patmos_test_recursion_bin -e main --report
+#)
+
+###############################################################################################################################
+# JUMPTABLE INT
+###############################################################################################################################
 
 # test samples - jumptable
 add_executable(patmos_test_jumptable_int_bin jumptable_int.c)
@@ -49,6 +115,11 @@ add_custom_target(patmos_test_jumptable_int_wcet
     COMMAND platin wcet -i wcet_jumptable.pml -b patmos_test_jumptable_int_bin -e jumpTableInt_test --report
 )
 
+
+###############################################################################################################################
+# JUMPTABLE VOID
+###############################################################################################################################
+
 # test samples - jumptable void
 add_executable(patmos_test_jumptable_void_bin jumptable_void.c)
 set_target_properties(patmos_test_jumptable_void_bin
@@ -64,6 +135,11 @@ add_custom_target(patmos_test_jumptable_void_wcet
     DEPENDS patmos_test_jumptable_void_bin
     COMMAND platin wcet -i wcet_jumptable_void.pml -b patmos_test_jumptable_void_bin -e jumpTableVoid_test --report
 )
+
+
+###############################################################################################################################
+# JUMPTABLE VOID PARAM
+###############################################################################################################################
 
 # test samples - jumptable void param
 add_executable(patmos_test_jumptable_void_param_bin jumptable_void_param.c)
@@ -81,6 +157,11 @@ add_custom_target(patmos_test_jumptable_void_param_wcet
     COMMAND platin wcet -i wcet_jumptable_void_param.pml -b patmos_test_jumptable_void_param_bin -e jumpTable_test --report
 )
 
+
+###############################################################################################################################
+# JUMPTABLE VOID REFPARAM
+###############################################################################################################################
+
 # test samples - jumptable void refparam
 add_executable(patmos_test_jumptable_void_refparam_bin jumptable_void_refparam.c)
 set_target_properties(patmos_test_jumptable_void_refparam_bin
@@ -96,6 +177,11 @@ add_custom_target(patmos_test_jumptable_void_refparam_wcet
     DEPENDS patmos_test_jumptable_void_refparam_bin
     COMMAND platin wcet -i wcet_jumptable_void_refparam.pml -b patmos_test_jumptable_void_refparam_bin -e jumpTableRefparam_test --report
 )
+
+
+###############################################################################################################################
+# FUNCTION PTR
+###############################################################################################################################
 
 # test sample - function ptr
 add_executable(patmos_test_function_ptr_bin function_ptr.c)
@@ -113,6 +199,11 @@ add_custom_target(patmos_test_function_ptr_wcet
     COMMAND platin wcet -i wcet_function_ptr.pml -b patmos_test_function_ptr_bin -e functionPtr_test --report
 )
 
+
+###############################################################################################################################
+# FUNCTION PTR VOID
+###############################################################################################################################
+
 # test sample - function ptr void
 add_executable(patmos_test_function_ptr_void_bin function_ptr_void.c)
 set_target_properties(patmos_test_function_ptr_void_bin
@@ -129,6 +220,10 @@ add_custom_target(patmos_test_function_ptr_void_wcet
     COMMAND platin wcet -i wcet_function_ptr_void.pml -b patmos_test_function_ptr_void_bin -e functionPtrVoid_test --report
 )
 
+
+###############################################################################################################################
+# FUNCTION PTR INT
+###############################################################################################################################
 # test sample - function ptr int
 add_executable(patmos_test_function_ptr_int_bin function_ptr_int.c)
 set_target_properties(patmos_test_function_ptr_int_bin
@@ -145,17 +240,67 @@ add_custom_target(patmos_test_function_ptr_int_wcet
     COMMAND platin wcet -i wcet_function_ptr_int.pml -b patmos_test_function_ptr_int_bin -e functionPtrInt_test --report
 )
 
+###############################################################################################################################
+# WHILE LOOP
+###############################################################################################################################
+
+
 # test sample - function while loop
 add_executable(patmos_test_while_loop_bin while_loop.c)
 set_target_properties(patmos_test_while_loop_bin
     PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_while_loop.pml"
 )
 
-# test sample - function for loop
-add_executable(patmos_test_for_loop_bin for_loop.c)
-set_target_properties(patmos_test_for_loop_bin
-    PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_for_loop.pml"
+###############################################################################################################################
+# FOR LOOP
+###############################################################################################################################
+
+# for loop original
+add_executable(patmos_test_for_loop_original_bin for_loop.c)
+set_target_properties(patmos_test_for_loop_original_bin
+    PROPERTIES LINK_FLAGS "-O0 -mserialize=patmos_test_for_loop_original.pml"
 )
+
+add_custom_target(patmos_test_for_loop_original_visualize
+    DEPENDS patmos_test_for_loop_original_bin copy_ruby_tools
+    COMMAND platin visualize -i patmos_test_for_loop_original.pml -f for_loop_test --show-calls --show-timings --graphviz-format png -O call_graphs
+)
+
+add_custom_target(patmos_test_for_loop_original_wcet
+    DEPENDS patmos_test_for_loop_original_bin
+    COMMAND platin wcet -i patmos_test_for_loop_original.pml -b patmos_test_for_loop_original_bin -e for_loop_test --report
+)
+
+add_custom_target(patmos_test_for_loop_original_sim
+    DEPENDS patmos_test_for_loop_original_bin
+    COMMAND pasim patmos_test_for_loop_original_bin
+)
+
+# for loop transformed
+add_executable(patmos_test_for_loop_transformed_bin for_loop.c)
+target_compile_definitions(patmos_test_for_loop_transformed_bin PUBLIC APPLY_TRANSFORMATION_RULE)
+set_target_properties(patmos_test_for_loop_transformed_bin
+    PROPERTIES LINK_FLAGS "-O0 -mserialize=patmos_test_for_loop_transformed.pml"
+)
+
+add_custom_target(patmos_test_for_loop_transformed_visualize
+    DEPENDS patmos_test_for_loop_transformed_bin copy_ruby_tools
+    COMMAND platin visualize -i patmos_test_for_loop_transformed.pml -f for_loop_test --show-calls --show-timings --graphviz-format png -O call_graphs
+)
+
+add_custom_target(patmos_test_for_loop_transformed_wcet
+    DEPENDS patmos_test_for_loop_transformed_bin
+    COMMAND platin wcet -i patmos_test_for_loop_transformed.pml -b patmos_test_for_loop_transformed_bin -e for_loop_test --report
+)
+
+add_custom_target(patmos_test_for_loop_transformed_sim
+    DEPENDS patmos_test_for_loop_transformed_bin
+    COMMAND pasim patmos_test_for_loop_transformed_bin
+)
+
+###############################################################################################################################
+# PAPER EXAMPLE
+###############################################################################################################################
 
 # test samples - paper example original; will not compile for patmos
 add_executable(patmos_test_paper_example_original_bin paper_example_original.c)
@@ -229,6 +374,10 @@ add_custom_target(patmos_test_paper_example_transformed_sim
     COMMAND pasim patmos_test_paper_example_transformed_bin
 )
 
+
+###############################################################################################################################
+# PAPER EXAMPLE 2
+###############################################################################################################################
 # test samples - paper example2 original; will not compile for patmos
 add_executable(patmos_test_paper_example2_original_bin paper_example2_original.c)
 set_target_properties(patmos_test_paper_example2_original_bin
