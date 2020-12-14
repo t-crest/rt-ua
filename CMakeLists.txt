@@ -96,7 +96,7 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     add_custom_target(wcet_subscriber
         DEPENDS pubsub_subscriber_patmos copy_ruby_tools
         COMMENT "Build binary for WCET analysis"
-        COMMAND platin wcet -i wcet_subscriber.pml -b patmos_open62541/patmos_open62541_wcet -e subscriberListen --report
+        COMMAND platin wcet -i wcet_subscriber.pml -b patmos_open62541/pubsub_subscriber_patmos -e subscriberListen --report
     )
     add_custom_target(analyze_subscriber
         DEPENDS pubsub_subscriber_patmos copy_ruby_tools

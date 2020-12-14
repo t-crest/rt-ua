@@ -23,15 +23,17 @@ volatile _SPM int *led_ptr = (volatile _SPM int *) PATMOS_IO_LED;
 
 UA_Boolean running = true;
 
+char buffer_tmp[256];
+
 __attribute__((noinline))
 UA_StatusCode
 subscriberListen(UA_PubSubChannel *psc) {
     //*led_ptr++;
     UA_ByteString buffer;
-    UA_StatusCode retval = UA_ByteString_allocBuffer(&buffer, 512);
-    //char buffer_tmp[512];
-    //buffer.data = buffer_tmp;
-    //buffer.length = 512;
+    UA_StatusCode retval;// = UA_ByteString_allocBuffer(&buffer, 128);
+
+    buffer.data = buffer_tmp;
+    buffer.length = 512;
 
     if(retval != UA_STATUSCODE_GOOD) {
         UA_LOG_ERROR(UA_Log_Stdout, UA_LOGCATEGORY_SERVER,
@@ -43,8 +45,9 @@ subscriberListen(UA_PubSubChannel *psc) {
     retval = psc->receive(psc, &buffer, NULL, 0);
 
     if(retval != UA_STATUSCODE_GOOD || buffer.length == 0) {
-        buffer.length = 512;
-        UA_ByteString_clear(&buffer);
+        buffer.length = 128;
+        //UA_ByteString_clear(&buffer);
+        memset(buffer.data, 0, buffer.length);
         return UA_STATUSCODE_GOOD;
     }
 
@@ -56,7 +59,8 @@ subscriberListen(UA_PubSubChannel *psc) {
     memset(&networkMessage, 0, sizeof(UA_NetworkMessage));
     size_t currentPosition = 0;
     UA_NetworkMessage_decodeBinary(&buffer, &currentPosition, &networkMessage);
-    UA_ByteString_clear(&buffer);
+    //UA_ByteString_clear(&buffer);
+    memset(buffer.data, 0, buffer.length);    
 
     // Is this the correct message type?
     if(networkMessage.networkMessageType != UA_NETWORKMESSAGE_DATASET)
