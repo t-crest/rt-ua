@@ -19,16 +19,13 @@
 
 #include <signal.h>
 
-volatile _SPM int *led_ptr = (volatile _SPM int *) PATMOS_IO_LED;
-
 UA_Boolean running = true;
 
-char buffer_tmp[256];
+char buffer_tmp[512];
 
 __attribute__((noinline))
 UA_StatusCode
 subscriberListen(UA_PubSubChannel *psc) {
-    //*led_ptr++;
     UA_ByteString buffer;
     UA_StatusCode retval;// = UA_ByteString_allocBuffer(&buffer, 128);
 
@@ -47,7 +44,7 @@ subscriberListen(UA_PubSubChannel *psc) {
     if(retval != UA_STATUSCODE_GOOD || buffer.length == 0) {
         buffer.length = 128;
         //UA_ByteString_clear(&buffer);
-        memset(buffer.data, 0, buffer.length);
+//        UA_memset(buffer.data, 0, buffer.length);
         return UA_STATUSCODE_GOOD;
     }
 
@@ -56,11 +53,11 @@ subscriberListen(UA_PubSubChannel *psc) {
                 "Message length: %lu", (unsigned long) buffer.length);
 
     UA_NetworkMessage networkMessage;
-    memset(&networkMessage, 0, sizeof(UA_NetworkMessage));
+    UA_memset(&networkMessage, 0, sizeof(UA_NetworkMessage));
     size_t currentPosition = 0;
     UA_NetworkMessage_decodeBinary(&buffer, &currentPosition, &networkMessage);
     //UA_ByteString_clear(&buffer);
-    memset(buffer.data, 0, buffer.length);    
+    UA_memset(buffer.data, 0, buffer.length);    
 
     // Is this the correct message type?
     if(networkMessage.networkMessageType != UA_NETWORKMESSAGE_DATASET)
@@ -72,26 +69,28 @@ subscriberListen(UA_PubSubChannel *psc) {
         goto cleanup;
 
     // Is this a KeyFrame-DataSetMessage?
+    _Pragma("loopbound min 1 max 1")
     for(size_t j = 0; j < networkMessage.payloadHeader.dataSetPayloadHeader.count; j++) {
         UA_DataSetMessage *dsm = &networkMessage.payload.dataSetPayload.dataSetMessages[j];
         if(dsm->header.dataSetMessageType != UA_DATASETMESSAGE_DATAKEYFRAME)
             continue;
 
         // Loop over the fields and print well-known content types
+        _Pragma("loopbound min 1 max 1")
         for(int i = 0; i < dsm->data.keyFrameData.fieldCount; i++) {
             const UA_DataType *currentType = dsm->data.keyFrameData.dataSetFields[i].value.type;
             if(currentType == &UA_TYPES[UA_TYPES_BYTE]) {
                 UA_Byte value = *(UA_Byte *)dsm->data.keyFrameData.dataSetFields[i].value.data;
-                UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-                            "Message content: [Byte] \tReceived data: %i", value);
+                //UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
+                //            "Message content: [Byte] \tReceived data: %i", value);
             } else if (currentType == &UA_TYPES[UA_TYPES_UINT32]) {
                 UA_UInt32 value = *(UA_UInt32 *)dsm->data.keyFrameData.dataSetFields[i].value.data;
-                UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
-                            "Message content: [UInt32] \tReceived data: %lu", value);
+                //UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
+                //            "Message content: [UInt32] \tReceived data: %lu", value);
 				//printf("Message content: [UInt32] \tReceived data: %u\n", value);
-                *led_ptr = value;
+                LEDS &= ~( (1U << DECODE_LED_BIT) );
 				
-            } else if (currentType == &UA_TYPES[UA_TYPES_DATETIME]) {
+            }/* else if (currentType == &UA_TYPES[UA_TYPES_DATETIME]) {
                 UA_DateTime value = *(UA_DateTime *)dsm->data.keyFrameData.dataSetFields[i].value.data;
                 UA_DateTimeStruct receivedTime = UA_DateTime_toStruct(value);
                 UA_LOG_INFO(UA_Log_Stdout, UA_LOGCATEGORY_USERLAND,
@@ -99,12 +98,13 @@ subscriberListen(UA_PubSubChannel *psc) {
                             "Received date: %02i-%02i-%02i Received time: %02i:%02i:%02i",
                             receivedTime.year, receivedTime.month, receivedTime.day,
                             receivedTime.hour, receivedTime.min, receivedTime.sec);
-            }
+            }*/
         }
     }
 
     cleanup:
     UA_NetworkMessage_clear(&networkMessage);
+
 
     return retval;
 }
@@ -113,7 +113,7 @@ int main(void)
 {
 #ifdef UA_ARCHITECTURE_PATMOS
 	static unsigned char my_ip[4] = {192, 168, 2, 1};
-
+    send_phy_command(MII_CONTROL_RST | MII_CONTROL_100MB, 0x00, 0x10); // set ETH0 to 100Mbit/s
 	eth_mac_initialize();
 	arp_table_init();
 	ipv4_set_my_ip(my_ip);
@@ -122,7 +122,7 @@ int main(void)
     UA_PubSubTransportLayer udpLayer = UA_PubSubTransportLayerUDPMP();
 
     UA_PubSubConnectionConfig connectionConfig;
-    memset(&connectionConfig, 0, sizeof(connectionConfig));
+    UA_memset(&connectionConfig, 0, sizeof(connectionConfig));
     connectionConfig.name = UA_STRING("UADP Connection 1");
     connectionConfig.transportProfileUri =
         UA_STRING("http://opcfoundation.org/UA-Profile/Transport/pubsub-udp-uadp");
@@ -136,11 +136,17 @@ int main(void)
     UA_PubSubChannel *psc = udpLayer.createPubSubChannel(&connectionConfig);
     psc->regist(psc, NULL, NULL);
 
+    LEDS = 0;
+
     UA_StatusCode retval = UA_STATUSCODE_GOOD;/*
     while(running && retval == UA_STATUSCODE_GOOD)
         retval = subscriberListen(psc);*/
     while(1)
+    {
+        LEDS |= (1U << SUBSCRIBE_LED_BIT);
         subscriberListen(psc);
+        LEDS &= ~( (1U << SUBSCRIBE_LED_BIT) );
+    }
 
     psc->close(psc);
 

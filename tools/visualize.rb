@@ -65,6 +65,7 @@ class CallGraphVisualizer < Visualizer
     refinement = ControlFlowRefinement.new(function, 'machinecode')
     cg = ScopeGraph.new(function, refinement, @pml, @options).callgraph
 
+    edge_count = 0
     nodes, nids = {}, {}
     cg.nodes.each_with_index { |n,i| nids[n] = i }
     cg.nodes.each { |node|
@@ -87,8 +88,12 @@ class CallGraphVisualizer < Visualizer
           end
         end
         g.add_edges(nodes[n],nodes[s],options)
+
+        edge_count+=1
       }
     }
+    info "Number of Nodes: #{cg.nodes.length()}"
+    info "Number of Edges: #{edge_count}"
     g
   end
 end

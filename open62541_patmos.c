@@ -153,7 +153,7 @@ int main(void) {
     //signal(SIGTERM, stopHandler);
 
     #ifdef UA_ARCHITECTURE_PATMOS
-        *led_ptr=0xffff;
+        LEDS = 0;
 
         static unsigned char my_ip[4] = {192, 168, 2, 2};
         eth_mac_initialize();
@@ -272,19 +272,16 @@ int main(void) {
     
     for(int i=0;i<1000;i++)
     {
-        usleep(10);
         valueUpdateCallback(pubServer, pubData);
 
-        start = *timer_ptr;
-        *led_ptr = 0x0;
-        //*gpio_ptr = 0xffff;
+        //start = *timer_ptr;
+        LEDS |= (1U << CALLBACK_LED_BIT);
         pubCallback(pubServer, pubData);
-        *led_ptr=0xffff;
-        //*gpio_ptr=0x0;
-        end = *timer_ptr;
+        LEDS &= (0U << CALLBACK_LED_BIT);
+        //end = *timer_ptr;
 
-        diff=end-start;
-        printf("%f\n", ((float)diff)*12.5/1000.0 );
+        //diff=end-start;
+        //printf("%f\n", ((float)diff)*12.5/1000.0);
     }
     return EXIT_SUCCESS;
 #endif

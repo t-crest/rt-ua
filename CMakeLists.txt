@@ -66,20 +66,22 @@ if("${UA_ARCHITECTURE}" STREQUAL "patmos")
     set_target_properties(pubsub_subscriber_patmos
         PROPERTIES LINK_FLAGS "-O2 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet_subscriber.pml"
     )
+    target_include_directories(pubsub_subscriber_patmos PUBLIC $ENV{TCRESTHOME}/patmos/c/ethlib)
     target_link_libraries(pubsub_subscriber_patmos PUBLIC
         open62541 m patmos_libeth)
 
     add_executable(patmos_open62541_wcet ${PATMOS_OPEN62541_SOURCE_FILES})
+    target_include_directories(patmos_open62541_wcet PUBLIC $ENV{TCRESTHOME}/patmos/c/ethlib)
     target_link_libraries(patmos_open62541_wcet PUBLIC
         open62541 m)
     target_link_libraries(patmos_open62541_wcet PUBLIC patmos_libeth)
 
 	#set_target_properties(patmos_open62541 PROPERTIES COMPILE_FLAGS "-target patmos-unknown-unknown-elf -mpatmos-disable-vliw")
     set_target_properties(patmos_open62541
-        PROPERTIES LINK_FLAGS "-O2 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet.pml"
+        PROPERTIES LINK_FLAGS "-Os -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet.pml"
     )
     set_target_properties(patmos_open62541_wcet
-        PROPERTIES LINK_FLAGS "-O0 -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet.pml"
+        PROPERTIES LINK_FLAGS "-Os -target patmos-unknown-unknown-elf -mpatmos-disable-vliw -mserialize=wcet.pml"
     )
     target_include_directories(patmos_open62541 PUBLIC $ENV{TCRESTHOME}/patmos/c/ethlib)
 
