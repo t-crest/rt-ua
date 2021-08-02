@@ -269,15 +269,13 @@ int main(void) {
     printf("CPU frequency: %d MHz\n", get_cpu_freq()/1000000);
 
     volatile int start, end, diff;
-    
+
     for(int i=0;i<1000;i++)
     {
         valueUpdateCallback(pubServer, pubData);
 
         //start = *timer_ptr;
-        LEDS |= (1U << CALLBACK_LED_BIT);
         pubCallback(pubServer, pubData);
-        LEDS &= (0U << CALLBACK_LED_BIT);
         //end = *timer_ptr;
 
         //diff=end-start;
