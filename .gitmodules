@@ -1,4 +1,4 @@
 [submodule "extern/open62541"]
 	path = extern/open62541
-	url = https://git.auto.tuwien.ac.at/rt-ua/open62541
+	url = git@git.auto.tuwien.ac.at:rt-ua/open62541
 	branch = master
