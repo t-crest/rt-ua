@@ -54,4 +54,15 @@ cd build
 cmake ..
 ```
 
+### Contributing to the WCET analyzable open62541 stack
+
+A WCET analyzable version of open62541 is used as a git submodule by rt-UA. It is automatically cloned when using the above git clone commands. To contribute, you can send pull requests, which we will review and accept. If you have access to the https://git.auto.tuwien.ac.at/ gitlab Server, you can also change ssh authentication via the following commands:
+
+```shell
+# Clone the repository as stated above
+cd extern/open62541
+git remote set-url origin git@git.auto.tuwien.ac.at:rt-ua/open62541.git
+git checkout master
+```
+
 ## Test Setup
